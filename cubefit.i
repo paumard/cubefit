@@ -287,8 +287,8 @@ func cubefit_eval(x, &gx, noscale=, returnmaps=)
 
   if (noscale) {
     x = x; // copy input in order to not modify it!
-    if (!is_void(psoffset)) x(..,) -= poffset(-,-,);
-    if (!is_void(pscale))   x(..,) /= pscale(-,-,);
+    if (!is_void(poffset)) x(..,) -= poffset(-,-,);
+    if (!is_void(pscale))  x(..,) /= pscale(-,-,);
   }
   
   if (is_void(pscale))   xs = x; else xs = x * pscale(-,-,);
