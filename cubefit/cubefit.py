@@ -283,24 +283,28 @@ class CubeFit:
         if (noscale):
             psc = np.ones(params_dim[2])
             pof = np.zeros(params_dim[2])
-            print(f"psc {psc}")
-            print(f"pof {pof}")
+            if self.dbg:
+                print(f"psc {psc}")
+                print(f"pof {pof}")
 
         else:
-            print(f"noscale {noscale}")
             psc = self.pscale
             pof = self.poffset
-            print(f"psc {psc}")
-            print(f"pof {pof}")
+            if self.dbg:
+                print(f"noscale {noscale}")
+                print(f"psc {psc}")
+                print(f"pof {pof}")
 
         if (psc is None):
-            print("psc is None")
+            if self.dbg:
+                print("psc is None")
             xs = params
         else:
             # xs = x * psc(-,-,)
             xs = params * psc
             #xs = params * psc[np.newaxis, np.newaxis, :]
-            print(f"xs {xs}")
+            if self.dbg:
+                print(f"xs {xs}")
 
         if (pof is not None):
             #xs += pof(-,-,);
@@ -324,7 +328,8 @@ class CubeFit:
 
         #print(f"xs[0,0,:] {xs[0,0,:]}")
         #TODO choose return tuple
-        print("dbgla")
+        if self.dbg:
+            print("dbgla")
         nz = self.fcn(self.fcn_x, *xs[0, 0, :])[0].size
         #nz = self.fcn(self.fcn_x, *xs[0, 0, :]).size
         #TODO wrong nz for doppler
@@ -354,18 +359,19 @@ class CubeFit:
         ie noscale = 1 returnmaps = 1
         """
 
-        print("DBG CALL denormalize parameters with x")
-        print("apply_offset_scale with x")
-        print(f"{x}")
-        #print(f"x[49,49,:]{x[49,49,]}")
-        #print(f"x[50,50,:]{x[50,50,]}")
-        #print(f"x[51,51,:]{x[51,51,]}")
+        if self.dbg:
+            print("DBG CALL denormalize parameters with x")
+            print("apply_offset_scale with x")
+            print(f"{x}")
+            #print(f"x[49,49,:]{x[49,49,]}")
+            #print(f"x[50,50,:]{x[50,50,]}")
+            #print(f"x[51,51,:]{x[51,51,]}")
 
-        print(f"with pscale {self.pscale}")
-        print(f"with poffset {self.poffset}")
+            print(f"with pscale {self.pscale}")
+            print(f"with poffset {self.poffset}")
 
-        print(f"with scale {self.scale}")
-        print(f"with delta {self.delta}")
+            print(f"with scale {self.scale}")
+            print(f"with delta {self.delta}")
 
 
         # d = x.shape
@@ -377,13 +383,14 @@ class CubeFit:
             # which x ?
             xs = x
         else:
-            print(f"shape pscale {self.pscale.shape}")
-            print(f"pscale {self.pscale}")
-            print(f"pscale[0] {self.pscale[0]}")
-            print(f"shape x {x.shape}")
-            print(f"x[0,0,:] {x[0,0,:]}")
-            print(f"x[50,50,:] {x[50,50,:]}")
-            # print(f"shape xs {xs.shape}")
+            if self.dbg:
+                print(f"shape pscale {self.pscale.shape}")
+                print(f"pscale {self.pscale}")
+                print(f"pscale[0] {self.pscale[0]}")
+                print(f"shape x {x.shape}")
+                print(f"x[0,0,:] {x[0,0,:]}")
+                print(f"x[50,50,:] {x[50,50,:]}")
+                # print(f"shape xs {xs.shape}")
             #TODO faire une boucle
             # ValueError: operands could not be broadcast together
             # with shapes (433,206,197) (1,1,3)
@@ -441,7 +448,8 @@ class CubeFit:
         #     if (!is_void(pscale))   x(..,) /= pscale(-,-,);
         # }
 
-        print("DBG CALL normalize parameters with x")
+        if self.dbg:
+            print("DBG CALL normalize parameters with x")
         # normalize paramaters put roughly in -1,1 boundaries according to user
         # expectation
         #x = np.array(x)
@@ -498,8 +506,9 @@ class CubeFit:
         # pscale, poffset, ptweak, decorrelate
         # restore, use, scale, delta, cube, fcn_x, fcn, weight, regularisation,
         # pscale, poffset, ptweak, decorrelate
-        print("DBG CALL eval func with x")
-        print(f"{x}")
+        if self.dbg:
+            print("DBG CALL eval func with x")
+            print(f"{x}")
         #print(f"x[49,49,:]{x[49,49,]}")
         #print(f"x[50,50,:]{x[50,50,]}")
         #print(f"x[51,51,:]{x[51,51,]}")
@@ -520,7 +529,8 @@ class CubeFit:
 
         derivatives = None
 
-        print(f"shape xs {xs.shape}")
+        if self.dbg:
+            print(f"shape xs {xs.shape}")
 
         if (self.ptweak is not None):
             # TODO use_method, ptweak, xs, derivatives
@@ -589,11 +599,12 @@ class CubeFit:
         # //  window,34
         # //  plg, tot
         # TODO implemente regularisation
-        print(f" not callable regularisation {not callable(self.regularisation)}")
+        if self.dbg:
+            print(f" not callable regularisation {not callable(self.regularisation)}")
         # if (!is_func(regularisation)) goto out
         #if (not callable(self.regularisation)):
             # if (self.regularisation is not None):
-        print("goto out")
+            print("goto out")
             # return None
         return res, gx
 
@@ -618,7 +629,8 @@ class CubeFit:
             if (not self.dbg):
                 tmp = self.regularisation(xbig[:, :, k], g,self.scale[k], self.delta[k]) / 4.
             else:
-                print("dbgla")
+                if self.dbg:
+                    print("dbgla")
                 tmp = self.regularisation(xbig[:, :, k], g,self.scale[k], self.delta[k],returnmaps) / 4.
             # TODO change
             if (self.dbg):
