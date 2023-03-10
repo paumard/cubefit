@@ -7,11 +7,20 @@ import matplotlib.pyplot as plt
 
 from astropy.io import fits  # pour fits
 
-from ngauss import gauss, ngauss
-from dopplerlines import dopplerlines
+from .ngauss import gauss, ngauss
+from .dopplerlines import DopplerLines
 
 import sys
-from VMLMB.python.optm import vmlmb
+
+# Look hard for vmlmb
+try:
+    from VMLMB.python.optm import vmlmb
+except ImportError:
+    try:
+        from vmlmb.optm import vmlmb
+    except ImportError:
+        from optm import vmlmb
+
 
 # include "multiprofile.i"
 # include "OptimPack1.i"
@@ -48,7 +57,7 @@ scratch = save(scratch,
 """
 
 
-class cubefit:
+class CubeFit:
     """
     cubefit class
 
@@ -154,7 +163,7 @@ class cubefit:
         if (regularisation is not None):
             self.regularisation = regularisation
         else:
-            self.regularisation = cubefit.markov
+            self.regularisation = markov
             # TODO regularisation should default to markov
 
         # function/methods should be the dopplerlin eval func
@@ -931,148 +940,144 @@ class cubefit:
         # extra,view, x
         print("TODO op_viewer")
 
-    @staticmethod
-    # voir si fonction de module plutot que de class satic
-    def noreg(self, x, *grad_obj,
-                     scale=None, delta=None, returnmap=None):
-        return x
+def noreg(x, *grad_obj,
+                 scale=None, delta=None, returnmap=None):
+    return x
 
-    @staticmethod
-    def markov(self, x, *grad_obj,
-                       scale=None, delta=None, returnmap=None):
-        """
-        DOCUMENT cubefit.markov(object,grad_object[,scale=,delta=])
+def markov(x, *grad_obj,
+                   scale=None, delta=None, returnmap=None):
+    """
+    DOCUMENT cubefit.markov(object,grad_object[,scale=,delta=])
 
-        delta^2 . sum [|dx|/delta -ln(1+|dx|/delta) + |dy|/delta -ln(1+|dy|/delta)]
-        where |dx| (m,n) = (o(m,n)-o(m-1,n))/scale is the x component of the
-        object gradient normalized by scale.
+    delta^2 . sum [|dx|/delta -ln(1+|dx|/delta) + |dy|/delta -ln(1+|dy|/delta)]
+    where |dx| (m,n) = (o(m,n)-o(m-1,n))/scale is the x component of the
+    object gradient normalized by scale.
 
-        KEYWORDS :
-        scale : Scale factor applied to Do (default value is 1)
-        delta : Threshold on the gradient for switching between linear and
-        quadratic behavour. When delta tends to infinity, the criterion
-        becomes purely quadratic.
+    KEYWORDS :
+    scale : Scale factor applied to Do (default value is 1)
+    delta : Threshold on the gradient for switching between linear and
+    quadratic behavour. When delta tends to infinity, the criterion
+    becomes purely quadratic.
 
-        AUTHOR: Damien Gratadour, borrowed from Yoda.
-        */
-        """
-        # TODO scale et delta already in self
-        if (scale is None):
-            scale = 1.
-        if (delta is None):
-            delta = 1.
+    AUTHOR: Damien Gratadour, borrowed from Yoda.
+    */
+    """
+    # TODO scale et delta already in self
+    if (scale is None):
+        scale = 1.
+    if (delta is None):
+        delta = 1.
 
-        # TODO object-roll?
-        # dx = (object-roll(object,[1, 0])) / (delta * scale)
-        # dy = (object-roll(object,[0, 1])) / (delta * scale)
+    # TODO object-roll?
+    # dx = (object-roll(object,[1, 0])) / (delta * scale)
+    # dy = (object-roll(object,[0, 1])) / (delta * scale)
 
-        # TODO index should be [0,-1] ?
-        dx = (x - np.roll(x, [1, 0])) / (delta * scale)
-        dy = (x - np.roll(x, [0, 1])) / (delta * scale)
+    # TODO index should be [0,-1] ?
+    dx = (x - np.roll(x, [1, 0])) / (delta * scale)
+    dy = (x - np.roll(x, [0, 1])) / (delta * scale)
 
-        # map is a python reserved keyword
-        amap = np.abs(dx) - np.log(1. + np.abs(dx)) + \
-            np.abs(dy) - np.log(1. + np.abs(dy))
+    # map is a python reserved keyword
+    amap = np.abs(dx) - np.log(1. + np.abs(dx)) + \
+        np.abs(dy) - np.log(1. + np.abs(dy))
 
-        if (returnmap):
-            return (delta**2) * amap
+    if (returnmap):
+        return (delta**2) * amap
 
-        crit = (delta**2) * np.sum(amap)
+    crit = (delta**2) * np.sum(amap)
 
-        dx /= (1. + abs(dx))
-        dy /= (1. + abs(dy))
+    dx /= (1. + abs(dx))
+    dy /= (1. + abs(dy))
 
-        # roll
-        grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
-                   (delta / scale)
+    # roll
+    grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
+               (delta / scale)
 
-        return crit, grad_obj
+    return crit, grad_obj
 
-    @staticmethod
-    # voir si fonction de module plutot que de class satic
-    def l1l2(self, x, *grad_obj,
-                     scale=None, delta=None, returnmap=None):
-        """
-        DOCUMENT cubefit.l1l2(object,grad_object[,scale=,delta=])
-        delta^2 . sum [|dx|/delta -ln(1+|dx|/delta)+ |dy|/delta -ln(1+|dy|/delta)]
-        where |dx| (m,n) = [o(m,n)-o(m-1,n)]/scale
-        is the x component of the  object gradient normalized by scale.
+# voir si fonction de module plutot que de class satic
+def l1l2(x, *grad_obj,
+                 scale=None, delta=None, returnmap=None):
+    """
+    DOCUMENT cubefit.l1l2(object,grad_object[,scale=,delta=])
+    delta^2 . sum [|dx|/delta -ln(1+|dx|/delta)+ |dy|/delta -ln(1+|dy|/delta)]
+    where |dx| (m,n) = [o(m,n)-o(m-1,n)]/scale
+    is the x component of the  object gradient normalized by scale.
 
-        KEYWORDS :
-        scale : Scale factor applied to Do (default value is 1)
-        delta : Threshold on the gradient for switching between linear
-        and quadratic behavour. When delta tends to infinity,
-        the criterion becomes purely quadratic.
+    KEYWORDS :
+    scale : Scale factor applied to Do (default value is 1)
+    delta : Threshold on the gradient for switching between linear
+    and quadratic behavour. When delta tends to infinity,
+    the criterion becomes purely quadratic.
 
-        AUTHOR: Damien Gratadour, borrowed from Yoda.
-        """
+    AUTHOR: Damien Gratadour, borrowed from Yoda.
+    """
 
-        # if (!is_set(scale)) scale = 1.
-        # if (!is_set(delta)) delta = 1.
-        # TODO scale et delta already in self
-        if (scale is None):
-            scale = 1.
-        if (delta is None):
-            delta = 1.
+    # if (!is_set(scale)) scale = 1.
+    # if (!is_set(delta)) delta = 1.
+    # TODO scale et delta already in self
+    if (scale is None):
+        scale = 1.
+    if (delta is None):
+        delta = 1.
 
-        # TODO object-roll ?
-        # realise un shift
-        dx = (x - np.roll(x, [1, 0])) / (delta * scale)
-        dy = (x - np.roll(x, [0, 1])) / (delta * scale)
+    # TODO object-roll ?
+    # realise un shift
+    dx = (x - np.roll(x, [1, 0])) / (delta * scale)
+    dy = (x - np.roll(x, [0, 1])) / (delta * scale)
 
-        r = np.sqrt(dx**2 + dy**2)
+    r = np.sqrt(dx**2 + dy**2)
 
-        # map is a reserved python keyword
-        amap = r - np.log(1.+r)
+    # map is a reserved python keyword
+    amap = r - np.log(1.+r)
 
-        if (returnmap):
-            return (delta**2) * amap
+    if (returnmap):
+        return (delta**2) * amap
 
-        crit = (delta**2) * np.sum(amap)
+    crit = (delta**2) * np.sum(amap)
 
-        dx /= (1. + r)
-        dy /= (1. + r)
+    dx /= (1. + r)
+    dy /= (1. + r)
 
-        # TODO dx-roll is that ok (x - roll) en place de object-roll
-        # ou est ce object - roll ?
-        grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
-                   (delta / scale)
+    # TODO dx-roll is that ok (x - roll) en place de object-roll
+    # ou est ce object - roll ?
+    grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
+               (delta / scale)
 
-        return crit, grad_obj
+    return crit, grad_obj
 
-    def corr(xy, *grad, deriv=None):
-        """
-        DOCUMENT correlation = cubefit.corr(xy [, grad, deriv=1])
-        Return the cross-correlation of XY(..,1) and XY(..,2)
-        """
-        x = xy[:, 1]
-        y = xy[:2]
+def corr(xy, *grad, deriv=None):
+    """
+    DOCUMENT correlation = cubefit.corr(xy [, grad, deriv=1])
+    Return the cross-correlation of XY(..,1) and XY(..,2)
+    """
+    x = xy[:, 1]
+    y = xy[:2]
 
-        d = x.shape
-        n = x.size
-        sx = sum(x)
-        sy = sum(y)
-        u = n*sum(x*y) - (sx*sy)
-        a = n*sum(x**2) - sx**2
-        b = n*sum(y**2) - sy**2
-        v = np.sqrt(a*b)
+    d = x.shape
+    n = x.size
+    sx = sum(x)
+    sy = sum(y)
+    u = n*sum(x*y) - (sx*sy)
+    a = n*sum(x**2) - sx**2
+    b = n*sum(y**2) - sy**2
+    v = np.sqrt(a*b)
+    if (v):
+        res = u/v
+    else:
+        res = 1.
+
+    # res = v ? u/v : 1.
+
+    if (deriv):
         if (v):
-            res = u/v
+            gx = (n*y - sy - u*(n*x - sx)/a) / v
+            gy = (n*x - sx - u*(n*y - sy)/b) / v
+            grad = [gx, gy]
+
         else:
-            res = 1.
+            grad = np.array([1., d, 2])
 
-        # res = v ? u/v : 1.
-
-        if (deriv):
-            if (v):
-                gx = (n*y - sy - u*(n*x - sx)/a) / v
-                gy = (n*x - sx - u*(n*y - sy)/b) / v
-                grad = [gx, gy]
-
-            else:
-                grad = np.array([1., d, 2])
-
-        return res, grad
+    return res, grad
 
 # cubefit = save(
 #        //methods

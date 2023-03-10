@@ -1,0 +1,51 @@
+import unittest
+import ngauss
+import numpy as np
+import matplotlib.pyplot as plt
+
+class Test1DModel(unittest.TestCase):
+
+    def check_jacobian(self, f, x, *a, epsilon=1e-6, tol=None):
+        '''Check the Jacobian of f where f is a callable with syntax
+         ymodel, dyda = f(xdata, a)
+        xdata: independent variable
+        a: parameters
+        ymodel: dependant variable
+        dyda: Jacobian matrix, d(ymodel)/d(a)'''
+        if tol is None:
+            tol=epsilon*10.;
+        a = np.asarray(a, dtype=np.float64)
+        if np.isscalar(x):
+            x = np.float64(x)
+        else:
+            x = np.asarray(x, dtype=np.float64)
+        nterms = a.size
+        jac = np.zeros(x.shape + (nterms,))
+    
+    y0, jac0=f(x, *a)
+        for k in range(nterms):
+            ah=np.copy(a)
+            ah[k] += epsilon
+            yh, jach = f(x, *ah)
+            jac[:, k]=(yh-y0)/epsilon
+
+        self.assertTrue(np.max(np.abs(jac-jac0)) < tol, "Jacobian is not within tolerance")
+
+class TestGauss(Test1DModel):
+    '''UnitTest class to test gauss function
+    '''
+    def test_gauss_jacobian(self):
+        a = [1. , 1. , 0.5, 0.5, 0.1]
+        x = np.linspace(-10, 10, 3000)
+        self.check_jacobian(ngauss.gauss, x, *a)
+
+class TestNGauss(Test1DModel):
+    '''UnitTest class to test gauss function
+    '''
+    def test_ngauss_jacobian(self):
+        a = [1. , 1. , 0.5, 0.5, 0.1]
+        x = np.linspace(-10, 10, 3000)
+        self.check_jacobian(ngauss.ngauss, x, *a)
+
+if __name__ == '__main__':
+   unittest.main()

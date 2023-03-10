@@ -2,7 +2,7 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
-from ngauss import ngauss
+from .ngauss import ngauss
 
 # TODO: pythonify docstrings
 
@@ -11,7 +11,7 @@ from ngauss import ngauss
 # from astropy.utils.data import get_pkg_data_filename
 
 
-class dopplerlines():
+class DopplerLines():
     """
      A class for fitting one or several Doppler shifted lines over a
      spectrum. The line will bear the same Doppler shift and the same
