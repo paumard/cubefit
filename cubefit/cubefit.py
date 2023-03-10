@@ -804,7 +804,8 @@ class CubeFit:
             # nx = (d=dimsof(x))(0)
         d = x.shape
         nx = x.shape[-1]
-        print(f"nx is {nx}")
+        if self.dbg:
+            print(f"nx is {nx}")
 
         # pour DBG
         # op_viewer = None

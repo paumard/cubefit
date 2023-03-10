@@ -73,22 +73,24 @@ class TestCubefit(unittest.TestCase):
     '''
     def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None, diflim=None):
         if diflim is None:
-            diflim=epsilon;
+            diflim=np.min(epsilon);
         if diftol is None:
             diftol=diflim*reltol;
         d = x.shape
+        if np.isscalar(epsilon):
+            epsilon=np.ones(d[2])*epsilon
         g = np.zeros(d)
         f0, g0 = f(x)
         for k in range(d[2]):
             for j in range(d[1]):
                 for i in range(d[0]):
                     temp = np.copy(x)
-                    temp[i, j, k] += 0.5*epsilon
+                    temp[i, j, k] += 0.5*epsilon[k]
                     fp, gp=f(temp)
-                    temp[i, j, k] -= epsilon
+                    temp[i, j, k] -= epsilon[k]
                     fm, gm=f(temp)
                     # this is (f(x+h/2)-f(x-h/2))/h
-                    g[i, j, k] = (fp-fm)/epsilon
+                    g[i, j, k] = (fp-fm)/epsilon[k]
         absval=0.5*np.abs(g+g0)
         difval=np.abs(g-g0)
         cond=absval>diflim
@@ -114,11 +116,18 @@ class TestCubefit(unittest.TestCase):
         xreal = np.zeros((nx, ny, xreal_1d.size))
         for k in range(nterms):
             xreal[:, :, k]=xreal_1d[k]
-        waxis = np.linspace(2.15, 2.175, nz)
-        lineobj = DopplerLines(2.166120, waxis, profile=ngauss)
-        fitobj = CubeFit(cube_zeros, lineobj, waxis, weight)
+        waxis = np.linspace(2.15e-6, 2.175e-6, nz)
+        lineobj = DopplerLines(2.166120e-6, waxis, profile=gauss)
+        fitobj = CubeFit(None, lineobj, waxis, weight)
+        cube_real = fitobj.model(xreal)
+        fitobj.cube = cube_real
 
-        self.check_gradient(fitobj.eval, xreal, epsilon=1e-4)
+        xtest_1d = np.array([1.0, 0.6, 50., 120])
+        nterms = len(xreal_1d)
+        xtest = np.zeros((nx, ny, xtest_1d.size))
+        for k in range(nterms):
+            xtest[:, :, k]=xtest_1d[k]
+        self.check_gradient(fitobj.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.], diftol=1e-2)
 
     def test_cubefit_gauss(self, dbg=False):
         # debug model
@@ -230,6 +239,13 @@ class TestCubefit(unittest.TestCase):
                                         blmvm=False, fmin=0, verb=1,
                                         output=sys.stdout)
 
+        # build best model cube
+        cube_model=fitobj_eval_gauss.model(res_x)
+        # compute reduced chi2
+        chi2=np.sum(((cube_noise_gauss-cube_model)/sigma)**2)/(cube_noise_gauss.size-res_x.size)
+        # raise error is chi2 not close to 1
+        self.assertAlmostEqual(chi2, 1, places=1)
+
         # write_fits(res_x, "mycube_res_x_gauss.fits")
         # write_fits(fx, "mycube_res_fx_dop.fits")
         # write_fits(gx, "mycube_res_gx_dop.fits")
@@ -240,6 +256,7 @@ class TestCubefit(unittest.TestCase):
 
     def test_cubefit_fit(self, dbg=False):
         """
+        test_cubefit_fit
         implementation of the fit function test
         """
         # debug model
@@ -337,6 +354,14 @@ class TestCubefit(unittest.TestCase):
 
         (res_x, fx, gx, status) = fitobj_eval_doppler.fit( x0_test)
 
+        # build best model cube
+        cube_model=fitobj_eval_doppler.model(res_x)
+        # compute reduced chi2
+        chi2=np.sum(((cube_noise_doppler-cube_model)/sigma)**2)/(cube_noise_doppler.size-res_x.size)
+        # raise error is chi2 not close to 1
+        self.assertAlmostEqual(chi2, 1, places=1)
+
+
         if dbg:
             print("# Iter.   Time (ms)   Eval. Reject.    Obj. Func.      Grad.  Step")
             print("res_x for test_fit")
@@ -347,7 +372,7 @@ class TestCubefit(unittest.TestCase):
 
     def test_cubefit(self, dbg=False):
         """
-        EXAMPLE
+        test_cubefit
         #fitobj = cubefit(new, cube = cubl(,,indlines), weight = noise,
         #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
         #                 scale=scale, delta=delta, regularisation=cubefit.l1l2,
@@ -441,7 +466,8 @@ class TestCubefit(unittest.TestCase):
 
         # model
         # cube_model=fitobj.model(cube,a0)
-        print("compute model ...")
+        if dbg:
+            print("compute model ...")
         cube_model_doppler = fitobj_doppler_model.model(model_param_doppler)
 
         # add noise
@@ -496,9 +522,17 @@ class TestCubefit(unittest.TestCase):
         # besoin fonction objectif (param 1)  gradient (param 2)
         # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
         #         mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
+        print()
         (res_x, fx, gx, status) = vmlmb(fitobj_eval_doppler.eval, x0, mem=x0.size,
                                     blmvm=False, fmin=0,
                                     verb=1, output=sys.stdout)
+
+        # build best model cube
+        cube_model=fitobj_eval_doppler.model(res_x)
+        # compute reduced chi2
+        chi2=np.sum(((cube_noise_doppler-cube_model)/sigma)**2)/(cube_noise_doppler.size-res_x.size)
+        # raise error is chi2 not close to 1
+        self.assertAlmostEqual(chi2, 1, places=1)
 
         # print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
         if dbg:
