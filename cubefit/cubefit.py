@@ -575,7 +575,7 @@ class CubeFit:
                     #print(f"atom shape {atom.shape}")
                     #print(f"weight shape {self.weight.shape}")
                     # yorick line gx(i,j,) += (grad * atom(,-))(sum,) *2.;
-                    gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ])) * 2.
+                    gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ]), axis=0) * 2.
         # //  window,34
         # //  plg, tot
         # TODO implemente regularisation
