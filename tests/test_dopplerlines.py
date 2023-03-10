@@ -36,6 +36,10 @@ class TestDopplerlines(Test1DModel):
          if dbg:
              print("testing dopplerlines module")
 
+         # instanciate a random number generator with fixed seed
+         # warning: changing the seed may affect the success of certain tests below
+         rng = np.random.default_rng(3)
+
          sigma = 20.5
 
          # first test
@@ -47,8 +51,8 @@ class TestDopplerlines(Test1DModel):
          if dbg:
              print("after init")
          a = np.array([1.2, 25., 100.])
-         y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
-         # y=dop(*a) + np.random.standard_normal(100) * sigma
+         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
+         # y=dop(*a) + rng.standard_normal(100) * sigma
          # print("ok will change")
 
          # print(f"y.shape {y.shape}")
@@ -76,6 +80,11 @@ class TestDopplerlines(Test1DModel):
          chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
          chi22 = np.sum(((y-model2)/sigma)**2)/(y.size-a.size+1)
 
+         # Raise error if the two fits are not close enough
+         for factor in resopt/resopt2:
+             self.assertAlmostEqual(factor, 1.)
+         self.assertAlmostEqual(chi2, chi22)
+
          if dbg:
              print(f"=======chi2")
              print(f"chi2 reduit {chi2}")
@@ -99,8 +108,8 @@ class TestDopplerlines(Test1DModel):
          waxis = np.linspace(2.15, 2.175, 100)
          dop = DopplerLines(lines, waxis)
          a = np.array([1.2, 0.5, 25., 100.])
-         # y=dop(*a) + np.random.standard_normal(100) * sigma
-         y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
+         # y=dop(*a) + rng.standard_normal(100) * sigma
+         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
 
          if dbg:
              print("===FIT 2==========")
@@ -112,6 +121,11 @@ class TestDopplerlines(Test1DModel):
          model2 = dop(waxis, *resopt2)[0]
          chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
          chi22 = np.sum(((y-model2)/sigma)**2)/(y.size-a.size+1)
+
+         # Raise error if the two fits are not close enough
+         for factor in resopt/resopt2:
+             self.assertAlmostEqual(factor, 1., places=5)
+         self.assertAlmostEqual(chi2, chi22)
 
          if dbg:
              print(f"=======chi2")
@@ -135,8 +149,8 @@ class TestDopplerlines(Test1DModel):
          waxis = np.linspace(2.15, 2.175, 100)
          dop = DopplerLines(lines, waxis)
          a = np.array([1.2, 0.5, 25., 100., 1.])
-         # y=dop(*a) + np.random.standard_normal(100) * sigma
-         y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
+         # y=dop(*a) + rng.standard_normal(100) * sigma
+         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
          if dbg:
              print(f"y==={y}")
              print("===FIT 2 + cst==========")
@@ -149,6 +163,11 @@ class TestDopplerlines(Test1DModel):
          model2 = dop(waxis, *resopt2)[0]
          chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
          chi22 = np.sum(((y-model2)/sigma)**2)/(y.size-a.size+1)
+
+         # Raise error if the two fits are not close enough
+         for factor in resopt/resopt2:
+             self.assertAlmostEqual(factor, 1., places=5)
+         self.assertAlmostEqual(chi2, chi22)
 
          if dbg:
              print(f"=======chi2")

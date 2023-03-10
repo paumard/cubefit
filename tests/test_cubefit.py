@@ -52,9 +52,19 @@ def plot_array_slice(myarray):
     plt.show()
 
 def add_noise(cube, sigma=0.02):
+    '''Add noise to data.
+
+    This method always uses the same pseudo-random sequence as it is
+    intended for use in a reproduceable test suite. Don't use it for
+    Monte-Carlo simulations or such.
+
+    '''
+    # instanciate a random number generator with fixed seed
+    # warning: changing the seed may affect the success of certain tests below
+    rng = np.random.default_rng(3)
     psigma = sigma
     tmp_cube = np.copy(cube)
-    tmp_cube = cube + np.random.standard_normal(cube.shape) * psigma
+    tmp_cube = cube + rng.standard_normal(cube.shape) * psigma
     return tmp_cube
 
 
@@ -140,7 +150,10 @@ class TestCubefit(unittest.TestCase):
         if dbg:
             print("test gauss call")
         y = gauss(gauss_xdata,*gauss_param)[0]
-        y_noise = y + np.random.standard_normal(y.size) * sigma
+        # instanciate a random number generator with fixed seed
+        # warning: changing the seed may affect the success of certain tests below
+        rng = np.random.default_rng(3)
+        y_noise = y + rng.standard_normal(y.size) * sigma
 
         #plt.figure()
         #plt.plot(gauss_xdata, y)
@@ -388,8 +401,12 @@ class TestCubefit(unittest.TestCase):
         sigma = 0.5
         if dbg:
             print("test doppler call")
+        # instanciate a random number generator with fixed seed
+        # warning: changing the seed may affect the success of certain tests below
+        rng = np.random.default_rng(3)
+
         lineobj_doppler(doppler_xdata, *doppler_param)[0] \
-            + np.random.standard_normal(nz) * sigma
+            + rng.standard_normal(nz) * sigma
 
         model_param_doppler = np.zeros((nx, ny, doppler_param.size))
 
