@@ -7,8 +7,18 @@ import matplotlib.pyplot as plt
 
 from astropy.io import fits  # pour fits
 
-from .ngauss import gauss, ngauss
-from .dopplerlines import DopplerLines
+# First try a relative import. This will work when ngauss,
+# dopplerlines and cubefit are submodules of a common module.  This
+# will fail when calling one of the submodules is called as a script,
+# so fall back to a simple import to cope with that use case.
+try:
+    from cubefit.ngauss import gauss, ngauss
+except ImportError:
+    from ngauss import gauss, ngauss
+try:
+    from cubefit.dopplerlines import DopplerLines
+except ImportError:
+    from dopplerlines import DopplerLines
 
 import sys
 
@@ -49,7 +59,7 @@ scratch = save(scratch,
                l1l2, markov, corr,
                op_f, op_viewer, op_printer
                )
-#fitobj = cubefit(new, cube = cubl(,,indlines), weight = noise,
+#fitobj = CubeFit(new, cube = cubl(,,indlines), weight = noise,
 #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
 #                 scale=scale, delta=delta, regularisation=cubefit.l1l2,
 #                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
@@ -59,9 +69,9 @@ scratch = save(scratch,
 
 class CubeFit:
     """
-    cubefit class
+    CubeFit class
 
-    Cubefit is an OXY class for designed for spectral fitting with
+    CubeFit is an OXY class for designed for spectral fitting with
     spatial regularisation in a spectro-imaging context.
 
     The 3D model is based on a 1D model and 2D parameter maps. The 2D
@@ -105,7 +115,7 @@ class CubeFit:
 
          The NEW method is a bit peculiar as it is normally called from
          the template CUBEFIT object itself:
-             fitobj = cubefit(new, )
+             fitobj = CubeFit(new, )
          It can however be called as
              fitobj2 = fitobj(new, )
     in which case the (potentially overriden) methods and static
@@ -143,7 +153,7 @@ class CubeFit:
               fitobj, regularisation=cubefit.markov
 
     SYNOPSIS
-    fitobj = cubefit(new, [members=members])
+    fitobj = CubeFit(new, [members=members])
     x = array(double, NX, NY, NPARMS) // initial guess
     fitobj, fit, x
     fitobj, view, x
@@ -1154,12 +1164,12 @@ def test_gauss():
     # np.c_[cube_gauss,gauss_param]
 
     print("creating line obj")
-    lineobj_gauss=dopplerlines(lines=gauss_param[0], waxis=gauss_xdata,
+    lineobj_gauss=DopplerLines(lines=gauss_param[0], waxis=gauss_xdata,
                                profile=ngauss)
 
     # create fit obj
     print("creating fit obj")
-    fitobj_gauss = cubefit(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
+    fitobj_gauss = CubeFit(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
 
     # model
     # cube_model=fitobj.model(cube,a0)
@@ -1186,7 +1196,7 @@ def test_gauss():
     # cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
-    fitobj_eval_gauss = cubefit(cube_noise_gauss,
+    fitobj_eval_gauss = CubeFit(cube_noise_gauss,
                                 fcn_gauss, fcn_x_gauss, weight)
 
     # calcul du point de depart x0 les cartes de parametres initiales
@@ -1255,7 +1265,7 @@ def test():
     doppler_xdata = np.linspace(2.15, 2.175, nz)
 
     print("creating line obj")
-    lineobj_doppler = dopplerlines(lines, doppler_xdata, profile=ngauss)
+    lineobj_doppler = DopplerLines(lines, doppler_xdata, profile=ngauss)
 
     print("after doppler init")
     sigma = 0.5
@@ -1272,7 +1282,7 @@ def test():
         model_param_doppler[:, :, i] = doppler_param[i]
 
     # print("creating line obj")
-    # lineobj_doppler = dopplerlines(lines=lines, waxis=doppler_xdata,
+    # lineobj_doppler = DopplerLines(lines=lines, waxis=doppler_xdata,
     #                               profile=ngauss)
 
     # TODO choose return tuple or not
@@ -1284,7 +1294,7 @@ def test():
 
     print("creating fit obj")
     # create fit obj
-    fitobj_doppler_model = cubefit(cube_doppler, fcn_doppler,
+    fitobj_doppler_model = CubeFit(cube_doppler, fcn_doppler,
                                    fcn_x_doppler, weight)
     # print(f"cube shape {cube.shape}")
     # print(f"cube_noise shape {cube_noise.shape}")
@@ -1326,7 +1336,7 @@ def test():
     cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
-    fitobj_eval_doppler = cubefit(cube_noise_doppler,
+    fitobj_eval_doppler = CubeFit(cube_noise_doppler,
                                   fcn_doppler, fcn_x_doppler, weight)
 
 
@@ -1391,7 +1401,7 @@ def test_fit():
     doppler_xdata = np.linspace(2.15, 2.175, nz)
 
     print("creating line obj")
-    lineobj_doppler = dopplerlines(lines, doppler_xdata, profile=ngauss)
+    lineobj_doppler = DopplerLines(lines, doppler_xdata, profile=ngauss)
 
     sigma = 0.2
 
@@ -1407,7 +1417,7 @@ def test_fit():
 
     print("creating fit obj")
     # create fit obj
-    fitobj_doppler_model = cubefit(cube_doppler, fcn_doppler,
+    fitobj_doppler_model = CubeFit(cube_doppler, fcn_doppler,
                                    fcn_x_doppler, weight)
     # model
     print("compute model ...")
@@ -1436,7 +1446,7 @@ def test_fit():
     cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
-    fitobj_eval_doppler = cubefit(cube_noise_doppler,
+    fitobj_eval_doppler = CubeFit(cube_noise_doppler,
                                   fcn_doppler, fcn_x_doppler, weight)
 
     doppler_param_test = np.array([1.1, 1., 25., 100])

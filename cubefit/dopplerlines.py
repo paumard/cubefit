@@ -2,7 +2,14 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
-from .ngauss import ngauss
+# First try a relative import. This will work when ngauss,
+# dopplerlines and cubefit are submodules of a common module.  This
+# will fail when calling one of the submodules is called as a script,
+# so fall back to a simple import to cope with that use case.
+try:
+    from cubefit.ngauss import gauss, ngauss
+except ImportError:
+    from ngauss import gauss, ngauss
 
 # TODO: pythonify docstrings
 
@@ -350,7 +357,7 @@ def test():
     """
     EXAMPLE
         x = span(2.15, 2.175, 100);
-        obj = dopplerlines(new, waxis = x, lines=2.166120);
+        obj = DopplerLines(new, waxis = x, lines=2.166120);
         y = obj(eval, [1.2, 25., 100.]) + random_n(100) * sigma;
         plg, y, x;
         a = [1., 0., 50.];
@@ -367,7 +374,7 @@ def test():
     print("# first test")
     lines = 2.166120
     waxis = np.linspace(2.15, 2.175, 100)
-    dop = dopplerlines(lines, waxis)
+    dop = DopplerLines(lines, waxis)
     print("after init")
     a = np.array([1.2, 25., 100.])
     y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
@@ -416,7 +423,7 @@ def test():
     print("# second test two lines")
     lines = (2.166120, 2.155)
     waxis = np.linspace(2.15, 2.175, 100)
-    dop = dopplerlines(lines, waxis)
+    dop = DopplerLines(lines, waxis)
     a = np.array([1.2, 0.5, 25., 100.])
     # y=dop(*a) + np.random.standard_normal(100) * sigma
     y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
@@ -449,7 +456,7 @@ def test():
     print("# third test two lines and more parameter")
     lines = (2.166120, 2.155)
     waxis = np.linspace(2.15, 2.175, 100)
-    dop = dopplerlines(lines, waxis)
+    dop = DopplerLines(lines, waxis)
     a = np.array([1.2, 0.5, 25., 100., 1.])
     # y=dop(*a) + np.random.standard_normal(100) * sigma
     y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
