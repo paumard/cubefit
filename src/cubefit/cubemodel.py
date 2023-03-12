@@ -83,10 +83,10 @@ class CubeModel:
            crosscorrelation of specific pairs of paramter maps).
 
        MEMBERS
-         cube:   the data to fit, a NX x NY x NZ array. The spectra are in
+         data:   the data to fit, a NX x NY x NZ array. The spectra are in
                  the Z dimension.
          weight: optional (defaults to nil). An array with the same
-                 dimensions as CUBE, giving the relative weights of the
+                 dimensions as DATA, giving the relative weights of the
                  data points for fitting. Set to 0. for points to ignore
                  altogether. For Gaussian noise, this should be set to
                  data root-mean-square (beware: this is the square root of
@@ -98,9 +98,9 @@ class CubeModel:
                  argument. Often a wavelength axis, sometimes a complex
                  object, possibly nil.
          regularisation: the regularisation function to use, by default
-                 cubefit.l1l2. Any function with the same prototype as
+                 cubemodel.l1l2. Any function with the same prototype as
                  l1l2 or markov is suitable. Set regularisation to nil
-                 remove regularisation entirely. Default: cubefit.markov.
+                 remove regularisation entirely. Default: cubemodel.markov.
          decorrelate: pairs of map ID for which the cross-correlation
                  should ba minimal together with weight, e.g. decorrelate
                  = [1, 2, 0.4] if the maps for parameters 1 and 2 should
@@ -167,7 +167,7 @@ class CubeModel:
     #            regularisation=None,decorrelate=None, \
     #            scale=None, delta=None, pscale=None, \
     #            poffset=None, ptweak=None):
-    def __init__(self, cube, fcn, fcn_x, weight=None,
+    def __init__(self, data=None, profile=None, profile_xdata=None, weight=None,
                  scale=None, delta=None, pscale=None, poffset=None,
                  ptweak=None, regularisation=None, decorrelate=None):
         if (regularisation is not None):
@@ -177,10 +177,10 @@ class CubeModel:
             # TODO regularisation should default to markov
 
         # function/methods should be the dopplerlin eval func
-        self.fcn = fcn
-        self.fcn_x = fcn_x
+        self.profile = profile
+        self.profile_xdata = profile_xdata
         # data
-        self.cube = cube
+        self.data = data
         self.weight = weight
         self.scale = scale
         self.delta = delta
@@ -259,9 +259,10 @@ class CubeModel:
         Create a model cube from a set of parameter maps. Like for the
         VIEW method, NOSCALE should almost always be set to 1.
 
-        parameter maps array first dimension number of fcn function parameters
+        parameter maps array first dimension number of profile function parameters
                             ny
                             nx
+
         SEE ALSO: cubefit, view
 
         """
@@ -324,14 +325,14 @@ class CubeModel:
         ny = params_dim[1]
         #print(f"ny {ny}")
 
-        #print(f"fcn_x {self.fcn_x}")
+        #print(f"fcn_x {self.profile_xdata}")
 
         #print(f"xs[0,0,:] {xs[0,0,:]}")
         #TODO choose return tuple
         if self.dbg:
             print("dbgla")
-        nz = self.fcn(self.fcn_x, *xs[0, 0, :])[0].size
-        #nz = self.fcn(self.fcn_x, *xs[0, 0, :]).size
+        nz = self.profile(self.profile_xdata, *xs[0, 0, :])[0].size
+        #nz = self.profile(self.profile_xdata, *xs[0, 0, :]).size
         #TODO wrong nz for doppler
 
         # y = np.array(double, nx, ny, nz)
@@ -340,9 +341,9 @@ class CubeModel:
 
         for i in range(nx):
             for j in range(ny):
-                y[i,j,:] = self.fcn(self.fcn_x, *xs[i,j,:])[0]
-                #y[:=,i,j] = self.fcn(self.fcn_x, *xs[i,j,:])[0]
-                # y[:, i, j] = self.fcn(xs[:, i, j], *self.fcn_x)
+                y[i,j,:] = self.profile(self.profile_xdata, *xs[i,j,:])[0]
+                #y[:=,i,j] = self.profile(self.profile_xdata, *xs[i,j,:])[0]
+                # y[:, i, j] = self.profile(xs[:, i, j], *self.profile_xdata)
         #print(f"y {y[4,4,:]}")
         #print(f"y.shape {y.shape}")
         #print(f"y[50,50,:] {y[50,50,:]}")
@@ -420,10 +421,10 @@ class CubeModel:
 #         for i in range(nx):
 #             for j in range(ny):
 #                 if (any(self.weight[i, j, ])):
-#                     spectrum = self.cube[i, j, :]
+#                     spectrum = self.data[i, j, :]
 #                     # TODO adapt with jacobian function
-#                     model = self.fcn(self.fcn_x, xs[i, j, :], deriv=1)
-#                     model_jacobian = self.fcn_jacobian(self.fcn_x, xs[i, j, :])
+#                     model = self.profile(self.profile_xdata, xs[i, j, :], deriv=1)
+#                     model_jacobian = self.profile_jacobian(self.profile_xdata, xs[i, j, :])
 #                     grad = model_jacobian
 #                     if (self.pscale is not None):
 #                         grad *= self.pscale[:, ]
@@ -497,9 +498,13 @@ class CubeModel:
         If RETURNMAPS is one, returns a stack of maps for each component of
         the criterion (chi2 term last) instead of the integral. pour debugger
 
+        Side effect: if data is not known but weight is None, set
+        weight to a cube of ones.
+
         SEE ALSO: cubefit, cubefit.l1l2, cubefit.markov,
                 cubefit.model, cubefit.fit
         */
+
         """
         # beware: "model" below is a local variable, not the method.
         # local scale, delta, cube, fcn_x, fcn, weight, regularisation,
@@ -509,6 +514,15 @@ class CubeModel:
         if self.dbg:
             print("DBG CALL eval func with x")
             print(f"{x}")
+
+        # eval() requires self.data to be set
+        if self.data is None:
+            raise ValueError("eval() requires self.data to be set")
+
+        # weights default to 1
+        if self.weight is None:
+            self.weight = np.ones(self.data.shape)
+
         #print(f"x[49,49,:]{x[49,49,]}")
         #print(f"x[50,50,:]{x[50,50,]}")
         #print(f"x[51,51,:]{x[51,51,]}")
@@ -553,23 +567,23 @@ class CubeModel:
                 #print(f"self.weight[197, j,: ] {self.weight[197, j,: ]}")
                 if (any(self.weight[i, j,:])):
 
-                    #print(f"cube shape {self.cube.shape}")
-                    spectrum = self.cube[i, j,: ]
+                    #print(f"cube shape {self.data.shape}")
+                    spectrum = self.data[i, j,: ]
                     # TODO adapt with jacobian function
-                    # model = self.fcn(self.fcn_x, xs[i,j,:], deriv=1)
+                    # model = self.profile(self.profile_xdata, xs[i,j,:], deriv=1)
                     #print(f"xs[i, j, :] {xs[i, j, :]}")
-                    #print(f"self.fcn_x {self.fcn_x}")
+                    #print(f"self.profile_xdata {self.profile_xdata}")
                     # fcn_x array 1 dim contenant les wavelength (size nz)
                     # model = spectre unique d flux au pixel i,j (size nz)
                     # *xs[i,j,:] np parameters array minimum size_np >= 3
-                    model, model_jacobian = self.fcn(self.fcn_x, *xs[i, j, :])
-                    # model_jacobian = self.fcn_jacobian(self.fcn_x, xs[i, j, :])
+                    model, model_jacobian = self.profile(self.profile_xdata, *xs[i, j, :])
+                    # model_jacobian = self.profile_jacobian(self.profile_xdata, xs[i, j, :])
                     # size_grad(nz,np)
                     grad = model_jacobian
                     if (self.pscale is not None):
                         # TODO add comment for a more pythonic code
 
-                        for k in range(self.fcn_x.size):
+                        for k in range(self.profile_xdata.size):
                             grad[k,:] *= self.pscale
 
                     if (derivatives is not None):
