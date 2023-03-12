@@ -769,37 +769,31 @@ class CubeModel:
 
     # __call__ ??  *fout *gout mis a None pour dbg
     # fout gout
-    def fit(self,x, fout=None, gout=None,
-            xmin=None, xmax=None, method=None, mem=None,
-            maxiter=None, maxeval=None,
-            frtol=None, fatol=None, verb=None, quiet=None, output=None,
-            sftol=None, sgtol=None, sxtol=None):
+    # Accept all vmlmb keywords (vmlmb_kwargs).
+    # lower and upper need special treatment (for rescaling).
+    # There's a bug in optm which requires verb > 0.
+    def fit(self,x,
+            lower=None, upper=None,
+            verb=1,
+            **vmlmb_kwargs):
+        """Fit model to self.data.
+
+        Wrapper around:
+          (result, fx, gx, status) = vmlmb(self.eval, x,
+                                           lower=lower, upper=upper,
+                                           verb=verb,
+                                           **vmlmb_kwargs)
+
+        Arguments:
+        x -- the stack of parameters to fit. Rescaled according to
+          self.pscale and self.poffset prior to calling vmlmb and
+          scaled back to physical values in self.eval(). RESULT is
+          also scaled back before being returned.
+
+        Keyword arguments:
+        All keywords are passed untouched to vmlmb, except lower and
+        upper which are rescaled as x.
         """
-            DOCUMENT cubefit.fit method
-                result = fitobj(fit, x)
-                or result = fitobj(fit, x, fout, gout)
-
-           Wrapper around
-             result = op_mnb(fitobj.op_f, x, fout, gout, extra=fitobj,
-          xmin=xmin, xmax=xmax, method=method, mem=mem, verb=verb, quiet=quiet,
-             viewer=fitobj.op_viewer, printer=fitobj.op_printer,
-             maxiter=maxiter, maxeval=maxeval,output=output,
-             frtol=frtol, fatol=fatol,
-             sftol=sftol, sgtol=sgtol, sxtol=sxtol)
-
-             X is rescaled according to fitobj.pscale and fitobj.poffset prior
-            to calling op_mnb and scaled back to physical values in
-            fitobj.eval. RESULT is also scaled back before being returned.
-
-            KEYWORDS
-            This method passes a bunch of keywords through to op_mnb:
-            xmin=, xmax=, method=, mem=, maxiter=, maxeval=,
-            frtol=, fatol=, verb=, quiet=, output=,
-            sftol=, sgtol=, sxtol=
-
-           SEE ALSO
-            cubefit, op_mnb
-         """
         if self.dbg:
             #pass
             print("DBG CALL fit func with x")
@@ -849,12 +843,12 @@ class CubeModel:
                 self.poffset = np.full(nx, self.poffset)
             for k in range(nx):
                 x[:,:, k] -= self.poffset[k]
-            if (xmin is not None):
+            if (lower is not None):
                 for k in range(nx):
-                    xmin[:,:, k] -= self.poffset[k]
-            if (xmax is not None):
+                    lower[:,:, k] -= self.poffset[k]
+            if (upper is not None):
                 for k in range(nx):
-                    xmax[:,:, k] -= self.poffset[k]
+                    upper[:,:, k] -= self.poffset[k]
         if self.dbg:
             print("after apply poffset")
             # print(f"{x}")
@@ -881,12 +875,12 @@ class CubeModel:
                 print(f"x[51,51,:]{x[51,51,]}")
 
 
-            if (xmin is not None):
+            if (lower is not None):
                 for k in range(nx):
-                    xmin[:,:, k] /= self.pscale[k]
-            if (xmax is not None):
+                    lower[:,:, k] /= self.pscale[k]
+            if (upper is not None):
                 for k in range(nx):
-                    xmax[:,:, k] /= self.pscale[k]
+                    upper[:,:, k] /= self.pscale[k]
 
         if self.dbg:
             # end normalize
@@ -916,16 +910,17 @@ class CubeModel:
 
             # TODO omnipack op_f => eval
             # result = op_mnb(op_f, x, fout, gout, extra=use(), \
-            #        xmin=xmin, xmax=xmax, method=method, \
+            #        lower=lower, upper=upper, method=method, \
             #        mem=mem, verb=verb, quiet=quiet,\
             #    viewer=op_viewer, printer=op_printer,\
             #    maxiter=maxiter, maxeval=maxeval,output=output,\
             #    frtol=frtol, fatol=fatol,\
             #    sftol=sftol, sgtol=sgtol, sxtol=sxtol )
 
-        (result, fx, gx, status) = vmlmb(self.eval, x, mem=x.size,
-                                             blmvm=False,
-                                             fmin=0, verb=1, output=sys.stdout)
+        (result, fx, gx, status) = vmlmb(self.eval, x,
+                                         lower=lower, upper=upper,
+                                         verb=verb,
+                                         **vmlmb_kwargs)
             # restore, use, pscale, poffset
         # denormalize?
         if (self.pscale is not None):
@@ -1402,7 +1397,7 @@ def test():
     # test(verb=1, gtol=0, xtol=0, ftol=0, fmin=0, mem="max")
 
     # from test_fit-Brg4
-    # xl1 = fitobj.fit( xl, verb=1, xmin=xmin, xmax=xmax);
+    # xl1 = fitobj.fit( xl, verb=1, lower=lower, upper=upper);
 
 
 def test_fit():

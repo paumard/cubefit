@@ -1,7 +1,7 @@
 import sys
 from .common import *
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel, vmlmb
+from cubefit.cubemodel import CubeModel
 from cubefit.ngauss import gauss, ngauss
 
 def write_fits(cube, cname):
@@ -192,9 +192,7 @@ class TestCubemodel(unittest.TestCase):
         # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
         #            mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
 
-        (res_x, fx, gx, status) = vmlmb(model.eval, x0, mem=x0.size,
-                                        blmvm=False, fmin=0, verb=1,
-                                        output=sys.stdout)
+        (res_x, fx, gx, status) = model.fit(x0)
 
         # build best model cube
         model_cube=model.model(res_x)
@@ -309,7 +307,7 @@ class TestCubemodel(unittest.TestCase):
             print(f"x0_test {x0_test}")
             print(f"calling fit function")
 
-        (res_x, fx, gx, status) = fitobj_eval_doppler.fit( x0_test)
+        (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0_test, fmin=0.)
 
         # build best model cube
         cube_model=fitobj_eval_doppler.model(res_x)
@@ -480,9 +478,7 @@ class TestCubemodel(unittest.TestCase):
         # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
         #         mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
         print()
-        (res_x, fx, gx, status) = vmlmb(fitobj_eval_doppler.eval, x0, mem=x0.size,
-                                    blmvm=False, fmin=0,
-                                    verb=1, output=sys.stdout)
+        (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0)
 
         # build best model cube
         cube_model=fitobj_eval_doppler.model(res_x)
