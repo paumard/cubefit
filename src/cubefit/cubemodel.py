@@ -59,7 +59,7 @@ scratch = save(scratch,
                l1l2, markov, corr,
                op_f, op_viewer, op_printer
                )
-#fitobj = CubeFit(new, cube = cubl(,,indlines), weight = noise,
+#fitobj = CubeModel(new, cube = cubl(,,indlines), weight = noise,
 #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
 #                 scale=scale, delta=delta, regularisation=cubefit.l1l2,
 #                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
@@ -67,11 +67,11 @@ scratch = save(scratch,
 """
 
 
-class CubeFit:
+class CubeModel:
     """
-    CubeFit class
+    CubeModel class
 
-    CubeFit is an OXY class for designed for spectral fitting with
+    CubeModel is an OXY class for designed for spectral fitting with
     spatial regularisation in a spectro-imaging context.
 
     The 3D model is based on a 1D model and 2D parameter maps. The 2D
@@ -115,7 +115,7 @@ class CubeFit:
 
          The NEW method is a bit peculiar as it is normally called from
          the template CUBEFIT object itself:
-             fitobj = CubeFit(new, )
+             fitobj = CubeModel(new, )
          It can however be called as
              fitobj2 = fitobj(new, )
     in which case the (potentially overriden) methods and static
@@ -153,7 +153,7 @@ class CubeFit:
               fitobj, regularisation=cubefit.markov
 
     SYNOPSIS
-    fitobj = CubeFit(new, [members=members])
+    fitobj = CubeModel(new, [members=members])
     x = array(double, NX, NY, NPARMS) // initial guess
     fitobj, fit, x
     fitobj, view, x
@@ -1182,7 +1182,7 @@ def test_gauss():
 
     # create fit obj
     print("creating fit obj")
-    fitobj_gauss = CubeFit(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
+    fitobj_gauss = CubeModel(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
 
     # model
     # cube_model=fitobj.model(cube,a0)
@@ -1209,7 +1209,7 @@ def test_gauss():
     # cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
-    fitobj_eval_gauss = CubeFit(cube_noise_gauss,
+    fitobj_eval_gauss = CubeModel(cube_noise_gauss,
                                 fcn_gauss, fcn_x_gauss, weight)
 
     # calcul du point de depart x0 les cartes de parametres initiales
@@ -1307,7 +1307,7 @@ def test():
 
     print("creating fit obj")
     # create fit obj
-    fitobj_doppler_model = CubeFit(cube_doppler, fcn_doppler,
+    fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
                                    fcn_x_doppler, weight)
     # print(f"cube shape {cube.shape}")
     # print(f"cube_noise shape {cube_noise.shape}")
@@ -1349,7 +1349,7 @@ def test():
     cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
-    fitobj_eval_doppler = CubeFit(cube_noise_doppler,
+    fitobj_eval_doppler = CubeModel(cube_noise_doppler,
                                   fcn_doppler, fcn_x_doppler, weight)
 
 
@@ -1430,7 +1430,7 @@ def test_fit():
 
     print("creating fit obj")
     # create fit obj
-    fitobj_doppler_model = CubeFit(cube_doppler, fcn_doppler,
+    fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
                                    fcn_x_doppler, weight)
     # model
     print("compute model ...")
@@ -1459,7 +1459,7 @@ def test_fit():
     cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
-    fitobj_eval_doppler = CubeFit(cube_noise_doppler,
+    fitobj_eval_doppler = CubeModel(cube_noise_doppler,
                                   fcn_doppler, fcn_x_doppler, weight)
 
     doppler_param_test = np.array([1.1, 1., 25., 100])

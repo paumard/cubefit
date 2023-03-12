@@ -1,7 +1,7 @@
 import sys
 from .common import *
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubefit import CubeFit, vmlmb
+from cubefit.cubemodel import CubeModel, vmlmb
 from cubefit.ngauss import gauss, ngauss
 
 def write_fits(cube, cname):
@@ -118,7 +118,7 @@ class TestCubefit(unittest.TestCase):
             xreal[:, :, k]=xreal_1d[k]
         waxis = np.linspace(2.15e-6, 2.175e-6, nz)
         lineobj = DopplerLines(2.166120e-6, waxis, profile=gauss)
-        fitobj = CubeFit(None, lineobj, waxis, weight)
+        fitobj = CubeModel(None, lineobj, waxis, weight)
         cube_real = fitobj.model(xreal)
         fitobj.cube = cube_real
 
@@ -192,7 +192,7 @@ class TestCubefit(unittest.TestCase):
         # create fit obj
         if dbg:
             print("creating fit obj")
-        fitobj_gauss = CubeFit(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
+        fitobj_gauss = CubeModel(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
 
         # model
         # cube_model=fitobj.model(cube,a0)
@@ -223,7 +223,7 @@ class TestCubefit(unittest.TestCase):
         # cube_empty = np.ndarray((nx, ny, nz))
 
         # on recree un obj cubefit
-        fitobj_eval_gauss = CubeFit(cube_noise_gauss,
+        fitobj_eval_gauss = CubeModel(cube_noise_gauss,
                                     fcn_gauss, fcn_x_gauss, weight)
 
         # calcul du point de depart x0 les cartes de parametres initiales
@@ -299,7 +299,7 @@ class TestCubefit(unittest.TestCase):
         if dbg:
             print("creating fit obj")
         # create fit obj
-        fitobj_doppler_model = CubeFit(cube_doppler, fcn_doppler,
+        fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
                                        fcn_x_doppler, weight)
         # model
         if dbg:
@@ -332,7 +332,7 @@ class TestCubefit(unittest.TestCase):
         cube_empty = np.ndarray((nx, ny, nz))
 
         # on recree un obj cubefit
-        fitobj_eval_doppler = CubeFit(cube_noise_doppler,
+        fitobj_eval_doppler = CubeModel(cube_noise_doppler,
                                       fcn_doppler, fcn_x_doppler, weight)
 
         doppler_param_test = np.array([1.1, 1., 25., 100])
@@ -455,7 +455,7 @@ class TestCubefit(unittest.TestCase):
         if dbg:
             print("creating fit obj")
         # create fit obj
-        fitobj_doppler_model = CubeFit(cube_doppler, fcn_doppler,
+        fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
                                        fcn_x_doppler, weight)
         # print(f"cube shape {cube.shape}")
         # print(f"cube_noise shape {cube_noise.shape}")
@@ -501,7 +501,7 @@ class TestCubefit(unittest.TestCase):
         cube_empty = np.ndarray((nx, ny, nz))
 
         # on recree un obj cubefit
-        fitobj_eval_doppler = CubeFit(cube_noise_doppler,
+        fitobj_eval_doppler = CubeModel(cube_noise_doppler,
                                       fcn_doppler, fcn_x_doppler, weight)
 
 
