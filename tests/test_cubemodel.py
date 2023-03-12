@@ -120,7 +120,7 @@ class TestCubemodel(unittest.TestCase):
 
         waxis = np.linspace(2.15e-6, 2.175e-6, nz)
 
-        profile = DopplerLines(2.166120e-6, waxis, profile=gauss)
+        profile = DopplerLines(2.166120e-6, profile=gauss)
         model = CubeModel(profile=profile, profile_xdata=waxis)
         cube_real = model.model(xreal)
         model.data = cube_real
@@ -237,7 +237,7 @@ class TestCubemodel(unittest.TestCase):
 
         if dbg:
             print("creating line obj")
-        lineobj_doppler = DopplerLines(lines, doppler_xdata, profile=ngauss)
+        lineobj_doppler = DopplerLines(lines, profile=ngauss)
 
         sigma = 0.2
 
@@ -374,7 +374,7 @@ class TestCubemodel(unittest.TestCase):
 
         if dbg:
             print("creating line obj")
-        lineobj_doppler = DopplerLines(lines, doppler_xdata, profile=ngauss)
+        lineobj_doppler = DopplerLines(lines, profile=ngauss)
 
         if dbg:
             print("after doppler init")

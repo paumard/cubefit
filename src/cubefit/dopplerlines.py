@@ -68,7 +68,7 @@ class DopplerLines():
      curvefit, dopplerlines.eval, dopplerlines.curvefit_func
     """
 
-    def __init__(self, lines, waxis, profile=None, profile_jac=None,
+    def __init__(self, lines, profile=None, profile_jac=None,
                  light_speed=None, relative=None):
 
         if profile is None:
@@ -88,8 +88,6 @@ class DopplerLines():
         self.lines = np.array(lines, ndmin=1, copy=False)
         self.nlines = self.lines.size
 
-        self.waxis = np.asarray(waxis)
-
         # relative : index of the reference wavelength in the array
         # indice de la raie reference dans le tableau
         # TODO write test for special case
@@ -103,9 +101,8 @@ class DopplerLines():
             print(f"dop_init withi:")
             print(f"self.lines  {self.lines}")
             print(f"self.nlines  {self.nlines}")
-            print(f"self.waxis {self.waxis}")
 
-    def __call__(self,xdata ,*params):
+    def __call__(self, xdata ,*params):
         """
         model = obj(eval, a, grad, deriv=deriv)
         Evaluate model. OBJ is an instance of the DOPPLERLINES class.
@@ -183,18 +180,18 @@ class DopplerLines():
         # print f"{:.2e}".format(widths)
         # print(np.format_float_positional(widths,precision=6))
 
-        model = np.zeros(self.waxis.shape)
+        model = np.zeros(xdata.shape)
 
         # print(f"model {model}")
 
         # TODO need to declare grad even if not deriv
         # if (deriv):
-        # grad = np.zeros(self.waxis.shape, a.size)
-        # grad = np.zeros((a.size, self.waxis.size), dtype=float)
-        # print(f"dim grad {len(params)} {self.waxis.size}")
-        # print(f"waxis shape is {self.waxis.shape}")
-        # grad = np.zeros((len(a),self.waxis.size), dtype=float)
-        grad = np.zeros((len(params), *self.waxis.shape), dtype=float)
+        # grad = np.zeros(xdata.shape, a.size)
+        # grad = np.zeros((a.size, xdata.size), dtype=float)
+        # print(f"dim grad {len(params)} {xdata.size}")
+        # print(f"waxis shape is {xdata.shape}")
+        # grad = np.zeros((len(a),xdata.size), dtype=float)
+        grad = np.zeros((len(params), *xdata.shape), dtype=float)
         # print(f"grad {grad}")
 
         if self.dbg:
@@ -231,19 +228,19 @@ class DopplerLines():
                 aa[1] *= params[self.relative]
 
             # two func profile + profile_jac
-            # model += self.profile(self.waxis, aa, agrad, deriv=deriv)
+            # model += self.profile(xdata, aa, agrad, deriv=deriv)
             # print(f"Yaa {aa}")
             # print(" ~~~ before gauss~~~")
-            acc_model, t_agrad = self.profile(self.waxis, *aa)
+            acc_model, t_agrad = self.profile(xdata, *aa)
             model += acc_model
             agrad = np.transpose(t_agrad, [1, 0])
             # TODO do we need deriv ?
             # if deriv:
-                # t_agrad = self.profile_jac(self.waxis, *aa)
+                # t_agrad = self.profile_jac(xdata, *aa)
             agrad = np.transpose(t_agrad, [1, 0])
             # print(f"{agrad.shape}")
             # print(f"agrad  {agrad}")
-            # plt.plot(self.waxis,agrad[0])
+            # plt.plot(xdata,agrad[0])
             # plt.show()
 
             if (self.relative is not None):
@@ -264,7 +261,7 @@ class DopplerLines():
                 # grad[:, k] = agrad[:, 1];
                 grad[k, :] = agrad[0, :]
                 # print(f"grad  {grad}")
-                # plt.plot(self.waxis,grad[0])
+                # plt.plot(xdata,grad[0])
                 # plt.show()
 
             # print(f"grad shape {grad.shape}  lines shape {self.lines.shape}   agrad shape {agrad.shape}")
@@ -273,14 +270,14 @@ class DopplerLines():
             # print(f"{np.asarray(self.lines)[0]}")
             grad[self.nlines, :] += np.asarray(self.lines)[k] * self.c_1 * agrad[1, :]
 
-            # plt.plot(self.waxis,grad[nlines])
+            # plt.plot(xdata,grad[nlines])
             # plt.show()
 
             # print(f"grad  {grad} (vel)")
             grad[self.nlines+1, :] += lambda1[k] * self.c_1 * agrad[2, :]
             # print(f"grad  {grad} (sigma)")
 
-            # plt.plot(self.waxis,grad[nlines+1])
+            # plt.plot(xdata,grad[nlines+1])
             # plt.show()
 
             # NOTE diff syntax pour le array(..
@@ -301,7 +298,7 @@ class DopplerLines():
         # print(f"model {model}")
         # print(f"model.shape {model.shape}")
         # plt.figure()
-        # plt.plot(self.waxis,model)
+        # plt.plot(xdata,model)
         # plt.show()
         # print(f"type model {type(model)}")
 
@@ -325,9 +322,9 @@ class DopplerLines():
             print("DBG CALL curvefit_func")
             print(f"xdata is {xdata}")
             print(f"params is {params}")
-            print(f"self.waxis is {self.waxis}")
+            print(f"xdata is {xdata}")
         # print(f"x is {x}")
-        # if not (xdata==self.waxis).all():
+        # if not (xdata==xdata).all():
         #    print(f"xdata {xdata}")
         #    raise Exception("Bad input")
         # print(f"xdata.shape is {xdata}")
@@ -347,9 +344,7 @@ class DopplerLines():
         """
         if self.dbg:
             print(f"xdata is {xdata}")
-            print(f"self.waxis is {self.waxis}")
-        if not (xdata == self.waxis).all():
-            raise Exception("Bad input")
+            print(f"xdata is {xdata}")
         return self(xdata, *params)[1]
 
 
@@ -357,7 +352,7 @@ def test():
     """
     EXAMPLE
         x = span(2.15, 2.175, 100);
-        obj = DopplerLines(new, waxis = x, lines=2.166120);
+        obj = DopplerLines(new, lines=2.166120);
         y = obj(eval, [1.2, 25., 100.]) + random_n(100) * sigma;
         plg, y, x;
         a = [1., 0., 50.];
@@ -374,7 +369,7 @@ def test():
     print("# first test")
     lines = 2.166120
     waxis = np.linspace(2.15, 2.175, 100)
-    dop = DopplerLines(lines, waxis)
+    dop = DopplerLines(lines)
     print("after init")
     a = np.array([1.2, 25., 100.])
     y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
@@ -423,7 +418,7 @@ def test():
     print("# second test two lines")
     lines = (2.166120, 2.155)
     waxis = np.linspace(2.15, 2.175, 100)
-    dop = DopplerLines(lines, waxis)
+    dop = DopplerLines(lines)
     a = np.array([1.2, 0.5, 25., 100.])
     # y=dop(*a) + np.random.standard_normal(100) * sigma
     y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
@@ -456,7 +451,7 @@ def test():
     print("# third test two lines and more parameter")
     lines = (2.166120, 2.155)
     waxis = np.linspace(2.15, 2.175, 100)
-    dop = DopplerLines(lines, waxis)
+    dop = DopplerLines(lines)
     a = np.array([1.2, 0.5, 25., 100., 1.])
     # y=dop(*a) + np.random.standard_normal(100) * sigma
     y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma

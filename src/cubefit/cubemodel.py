@@ -1186,8 +1186,7 @@ def test_gauss():
     # np.c_[cube_gauss,gauss_param]
 
     print("creating line obj")
-    lineobj_gauss=DopplerLines(lines=gauss_param[0], waxis=gauss_xdata,
-                               profile=ngauss)
+    lineobj_gauss=DopplerLines(lines=gauss_param[0], profile=ngauss)
 
     # create fit obj
     print("creating fit obj")
@@ -1287,7 +1286,7 @@ def test():
     doppler_xdata = np.linspace(2.15, 2.175, nz)
 
     print("creating line obj")
-    lineobj_doppler = DopplerLines(lines, doppler_xdata, profile=ngauss)
+    lineobj_doppler = DopplerLines(lines, profile=ngauss)
 
     print("after doppler init")
     sigma = 0.5
@@ -1304,8 +1303,7 @@ def test():
         model_param_doppler[:, :, i] = doppler_param[i]
 
     # print("creating line obj")
-    # lineobj_doppler = DopplerLines(lines=lines, waxis=doppler_xdata,
-    #                               profile=ngauss)
+    # lineobj_doppler = DopplerLines(lines=lines, profile=ngauss)
 
     # TODO choose return tuple or not
     # fcn_doppler = lineobj_doppler.curvefit_func
@@ -1423,7 +1421,7 @@ def test_fit():
     doppler_xdata = np.linspace(2.15, 2.175, nz)
 
     print("creating line obj")
-    lineobj_doppler = DopplerLines(lines, doppler_xdata, profile=ngauss)
+    lineobj_doppler = DopplerLines(lines, profile=ngauss)
 
     sigma = 0.2
 

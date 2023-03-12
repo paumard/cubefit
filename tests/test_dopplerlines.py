@@ -8,15 +8,15 @@ class TestDopplerlines(Test1DModel):
     '''
     def __init__(self, methodName='runTest'):
         self.waxis = np.linspace(2.15, 2.175, 100)
-        self.lineobj1 = DopplerLines(2.166120, self.waxis)
-        self.lineobj2 = DopplerLines((2.166120, 2.155), self.waxis)
+        self.lineobj1 = DopplerLines(2.166120)
+        self.lineobj2 = DopplerLines((2.166120, 2.155))
         Test1DModel.__init__(self, methodName)
         
     def test_dopplerlines_jacobian(self):
         self.check_jacobian(self.lineobj1, self.waxis, 1., 0., 50., reltol=1e-2, diftol=1e-9)
         self.check_jacobian(self.lineobj2, self.waxis, 1.2, 0.5, 25., 100., reltol=1e-2)
         waxis = np.linspace(2.15, 2.175, 433)
-        lineobj = DopplerLines(2.166120, waxis, profile=ngauss)
+        lineobj = DopplerLines(2.166120, profile=ngauss)
         xreal_1d = np.array([1.2, 0.5, 25., 100])
         self.check_jacobian(lineobj, waxis, *xreal_1d, epsilon=1e-6, reltol=1e-2, diftol=2e-8)
 
@@ -47,7 +47,7 @@ class TestDopplerlines(Test1DModel):
             print("# first test")
         lines = 2.166120
         waxis = np.linspace(2.15, 2.175, 100)
-        dop = DopplerLines(lines, waxis)
+        dop = DopplerLines(lines)
         if dbg:
             print("after init")
         a = np.array([1.2, 25., 100.])
@@ -106,7 +106,7 @@ class TestDopplerlines(Test1DModel):
             print("# second test two lines")
         lines = (2.166120, 2.155)
         waxis = np.linspace(2.15, 2.175, 100)
-        dop = DopplerLines(lines, waxis)
+        dop = DopplerLines(lines)
         a = np.array([1.2, 0.5, 25., 100.])
         # y=dop(*a) + rng.standard_normal(100) * sigma
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
@@ -147,7 +147,7 @@ class TestDopplerlines(Test1DModel):
             print("# third test two lines and more parameter")
         lines = (2.166120, 2.155)
         waxis = np.linspace(2.15, 2.175, 100)
-        dop = DopplerLines(lines, waxis)
+        dop = DopplerLines(lines)
         a = np.array([1.2, 0.5, 25., 100., 1.])
         # y=dop(*a) + rng.standard_normal(100) * sigma
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
