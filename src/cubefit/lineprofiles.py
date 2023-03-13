@@ -25,17 +25,44 @@ from scipy import optimize
 # DONE ajout boolean switch deriv if deriv return res, grad ?
 # def gauss(x, *a, deriv):
 def gauss(x, *a):
-    '''
-    Returns a gaussian:
-        I0*exp(-0.5*((x-x0)/dx)^2) [+a[3] [+a[4]*x]]
+    '''Compute a Gaussian profile.
+
+    Parameters
+    ----------
+    x : array_like
+        Independent variable, for instance wavelengths for which the
+        profile must be computed. Can be a scalar or 1D array.
+    a : array_like
+        Parameters of the Gaussian: (I0, x0, dx [, offset [, slope]]) with:
+        I0: peak value
+        x0: center
+        dx: Gaussian standard deviation
+        offset (optional): constant offset
+        slope (optional): linear offset
+
+    Returns
+    -------
+    ydata : array_like
+        The values of the Gaussian with paramaters a computed at
+        x. Same shape as x.
+    jac : array like
+        The Jacobian matrix of the model, with shape x.size × a.size
+        (if x is a 1D array) or a.size (if x is a scalar).
+    
+    Notes
+    -----
+    Returns a Gaussian:
+        I0*exp(-0.5*((x-x0)/dx)**2) [+a[3] [+a[4]*x]]
     Where:
         I0=a[0]
         x0=a[1]
         dx=a[2] (gaussian sigma)
 
-    Works with lmfit, and can return derivates.
-    Notes: FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
-    SEE ALSO: gauss_fit, asgauss, asgauss_fit
+    FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
+
+    See Also
+    --------
+    cubefit.lineprofiles.ngauss
     '''
     a = np.asarray(a, dtype=np.float64)
 
@@ -52,9 +79,11 @@ def gauss(x, *a):
 
 
     if np.isscalar(x):
-        x = np.float64(x)
+        x = np.asarray((x,), dtype=np.float64)
+        scalar_x = True
     else:
         x = np.asarray(x, dtype=np.float64)
+        scalar_x = False
 
     nterms = a.size
 
@@ -92,11 +121,40 @@ def gauss(x, *a):
     if (nterms == 5):
         res = res+a[4]*x
 
+    if scalar_x:
+        res=res[0]
+        grad=grad[0, :]
+
     return res, grad
 
 
 def ngauss(x, *a):
-    '''
+    '''Compute a normalized Gaussian profile.
+
+    Parameters
+    ----------
+    x : array_like
+        Independent variable, for instance wavelengths for which the
+        profile must be computed. Can be a scalar or 1D array.
+    a : array_like
+        Parameters of the Gaussian: (Sum, x0, dx [, offset [, slope]]) with:
+        Sum: integral of the Gaussian
+        x0: center
+        dx: Gaussian standard deviation
+        offset (optional): constant offset
+        slope (optional): linear offset
+
+    Returns
+    -------
+    ydata : array_like
+        The values of the Gaussian with paramaters a computed at
+        x. Same shape as x.
+    jac : array like
+        The Jacobian matrix of the model, with shape x.size × a.size
+        (if x is a 1D array) or a.size (if x is a scalar).
+    
+    Notes
+    -----
     Returns a normalised Gaussian:
      I0*exp(-0.5*((x-x0)/dx)^2) [+a[3] [+a[4]*x]]
     Where:
@@ -105,21 +163,24 @@ def ngauss(x, *a):
     dx=a[2] (gaussian sigma)
     I0=Sum/(sigma*sqrt(2*pi))
 
-   Works with lmfit, and can return derivates. In contrast with
-   gauss(), the first parameter is the integral of the Gaussian rather
-   than the peak value.
+    In contrast with gauss(), the first parameter is the integral of
+    the Gaussian rather than the peak value.
 
-   Notes: FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
+    FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
 
-   SEE ALSO: gauss, gauss_fit, asgauss, asgauss_fit
+    See also
+    --------
+    cubefit.lineprofiles.gauss
     '''
 
     a = np.asarray(a)
 
     if np.isscalar(x):
-        x = np.float64(x)
+        x = np.asarray((x,), dtype=np.float64)
+        scalar_x = True
     else:
         x = np.asarray(x, dtype=np.float64)
+        scalar_x = False
 
     sqrt2pim1 = 1/sqrt(2*np.pi)
 
@@ -141,6 +202,10 @@ def ngauss(x, *a):
 
     grad[:, 2] -= I0*sigmam1*grad[:, 0]
     grad[:, 0] *= eqwidthm1
+
+    if scalar_x:
+        res=res[0]
+        grad=grad[0, :]
 
     return res, grad
 
