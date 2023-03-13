@@ -2,7 +2,7 @@ import sys
 from .common import *
 from cubefit.dopplerlines import DopplerLines
 from cubefit.cubemodel import CubeModel
-from cubefit.ngauss import gauss, ngauss
+from cubefit.lineprofiles import gauss, ngauss
 
 def write_fits(cube, cname):
     fit_hdu = fits.PrimaryHDU(np.transpose(cube,[2,0,1]))

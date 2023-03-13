@@ -1,7 +1,7 @@
 from scipy import optimize
 from .common import *
 from cubefit.dopplerlines import DopplerLines
-from cubefit.ngauss import ngauss
+from cubefit.lineprofiles import ngauss
 
 class TestDopplerlines(Test1DModel):
     '''UnitTest class to test gauss function

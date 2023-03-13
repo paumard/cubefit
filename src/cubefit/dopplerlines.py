@@ -2,14 +2,14 @@ import numpy as np
 from scipy import optimize
 import matplotlib.pyplot as plt
 
-# First try a relative import. This will work when ngauss,
+# First try a relative import. This will work when lineprofiles,
 # dopplerlines and cubefit are submodules of a common module.  This
 # will fail when calling one of the submodules is called as a script,
 # so fall back to a simple import to cope with that use case.
 try:
-    from cubefit.ngauss import gauss, ngauss
+    from cubefit.lineprofiles import gauss, ngauss
 except ImportError:
-    from ngauss import gauss, ngauss
+    from lineprofiles import gauss, ngauss
 
 # TODO: pythonify docstrings
 

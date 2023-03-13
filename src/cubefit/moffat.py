@@ -1,3 +1,4 @@
+#TODO: integrate in lineprofiles.py
 #TODO &grad moffat1d
 #func moffat1d(x,a2,&grad,deriv=){
 def moffat1d(x,a2,deriv=):
