@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 
+'''Single-line spectral models
+
+Each profile has the following signature:
+  ydata, jacobian = profile(xdata, *parameters)
+
+Wrappers are provided to use these profiles with
+scipy.optimize.curve_fit (WrapToCurveFit) and to use functions
+designed for curve fit with cubefit (WrapFromCurveFit).
+
+'''
+
 import numpy as np
 from math import sqrt
 import matplotlib.pyplot as plt
@@ -134,27 +145,104 @@ def ngauss(x, *a):
     return res, grad
 
 
-def curvefit_func(xdata, *params):
-    # func dopplerlines_curvefit_func(x, a, &grad, deriv=) {
+class WrapToCurveFit:
+    '''Wrap a cubefit profile to a curve_fit objective function
 
-    """
+    Parameters
+    ----------
+    profile : callable
+        A curvefit.lineprofiles profile. 
+    '''
+    def __init__(self, profile):
+        self.profile=profile
 
-    """
-    #print(f"xdata is {xdata}")
-    #print(f"params is {params}")
-    return gauss(xdata, *params)[0]
+    def __call__(self, xdata, *params):
+        '''self(xdata, *params) -> self.profile(xdata, *params)[0]
+        '''
+        return self.profile(xdata, *params)[0]
+
+    def jac(self, xdata, *params):
+        '''self.jac(xdata, *params) -> self.profile(xdata, *params)[1]
+        '''
+        return self.profile(xdata, *params)[1]
+
+class WrapFromCurveFit:
+    '''Wrap a curve_fit objective function as a cubefit profile
+
+    Parameters
+    ----------
+    f : callable
+        A scipy.iptimize.curve_fit objective function.
+    jac : callable, optional
+        The Jacobian of f. If None, estimated numerically.
+    epsilon : array_like, optional
+        Passed to numerical_jacobian.
+
+    See Also
+    --------
+    scipy.optimize.curve_fit
+    cubefit.lineprofiles.numerical_jacobian
+    '''
+    def __init__(self, f, jac=None, epsilon=1e-6):
+        self.f=f
+        self.jac=jac
+        self.epsilon=epsilon
+
+    def __call__(self, xdata, *params):
+        ''' self(xdata, *params) -> (self.f(xdata, *params), self.jac(xdata, *params))
+        '''
+        val = self.f(xdata, *params)
+        if self.jac is None:
+            jac = numerical_jacobian(self.f, xdata, *params, epsilon=self.epsilon)
+        else:
+            jac = self.jac(xdata, *params)
+        return val, jac
+
+def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
+    '''Compute Jacobian matrix of a curve_fit model function
+
+    Parameters
+    ----------
+    f : callable
+        The model function, f(x, ...). It must take the independent
+        variable as the first argument and the parameters to fit as
+        separate remaining arguments.
+     xdata : array_like
+        The independent variable where the data is measured.
+    *a : tuplet
+        Parameters of the model.
+    epsilon : array_like, optional
+        Step for finite-difference estimation of the Jacobian
+        matrix. Can be a scalar (same step for all parameters) or same
+        size as params.
 
 
-def curvefit_jac(xdata, *params):
-    # func dopplerlines_curvefit_func(x, a, &grad, deriv=) {
+    Returns
+    -------
+    jac : array_like
+        Estimate of the Jacobian.
 
-    """
+    See Also
+    --------
+    scipy.optimize.curve_fit
+    '''
+    params = np.asarray(params, dtype=np.float64)
+    if np.isscalar(xdata):
+        xdata = np.float64(xdata)
+    else:
+        xdata = np.asarray(xdata, dtype=np.float64)
+    nterms = params.size
+    jac = np.zeros(xdata.shape + (nterms,))
 
-    """
-    #print(f"xdata is {xdata}")
-    #print(f"params is {params}")
-    return gauss(xdata, *params)[1]
+    for k in range(nterms):
+        ah=np.copy(params)
+        ah[k] += 0.5*epsilon
+        yp = f(xdata, *ah)
+        ah[k] -= epsilon
+        ym = f(xdata, *ah)
+        jac[:, k]=(yp-ym)/epsilon
 
+    return jac
 
 def test_gauss():
     test_gauss = True
@@ -195,9 +283,12 @@ def test_gauss():
     print("===FIT grad ==========")
     a0 = np.array([1.5, 0.4, 2., 5., 1.5])
 
-    resopt, reqcov = optimize.curve_fit(curvefit_func, nx, y, p0=a0)
-    resopt_jac, reqcov_jac = optimize.curve_fit(curvefit_func, nx, y, p0=a0,
-                                                jac=curvefit_jac)
+    # wrap gauss in a way suitable for curve_fit
+    curve_fit_func=WrapToCurveFit(gauss)
+
+    resopt, reqcov = optimize.curve_fit(curve_fit_func, nx, y, p0=a0)
+    resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
+                                                jac=curve_fit_func.jac)
 
     model = gauss(nx, *resopt)[0]
     model_jac = gauss(nx, *resopt_jac)[0]

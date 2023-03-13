@@ -1,35 +1,7 @@
 import unittest
 import numpy as np
 import matplotlib.pyplot as plt
-
-def numerical_jacobian(f, x, *a, epsilon=1e-6):
-    '''Jacobian = numerical_jacobian(f, x, *a, [epsilon])
-
-    Numerically compute Jacobian matrix of function f where f has
-    following calling sequence:
-
-      ydata = f(xdata, parameters)
-
-    the Jacobian matrix is [ d ydata[i] / d parameters[j] ].
-
-    '''
-    a = np.asarray(a, dtype=np.float64)
-    if np.isscalar(x):
-        x = np.float64(x)
-    else:
-        x = np.asarray(x, dtype=np.float64)
-    nterms = a.size
-    jac = np.zeros(x.shape + (nterms,))
-
-    for k in range(nterms):
-        ah=np.copy(a)
-        ah[k] += 0.5*epsilon
-        yp = f(x, *ah)
-        ah[k] -= epsilon
-        ym = f(x, *ah)
-        jac[:, k]=(yp-ym)/epsilon
-
-    return jac
+from cubefit.lineprofiles import numerical_jacobian, WrapToCurveFit, WrapFromCurveFit
 
 class Test1DModel(unittest.TestCase):
 
