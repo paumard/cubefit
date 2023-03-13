@@ -133,379 +133,179 @@ class TestCubemodel(unittest.TestCase):
 
         self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.], diftol=1e-2)
 
-    def test_cubemodel_gauss(self, dbg=False):
-        # debug model
-        if dbg:
-            print("starting cubemodel test gauss....")
+    def helper_cubemodel_fit(self, model, shape, xreal, xtest, sigma, **fit_kwargs):
+        """Helper for CubeModel.fit tests
 
-        # create a cube
-        nx, ny, nz = 5, 5, 433
-        nparms = 5
+        This does the following:
+        1- use model.model() to build a cube of dimensions given by shape
+        according to parameters xreal;
 
-        # choose parameter for model
+        2- add noise with standard deviation sigma to obtain mock
+        observational data and attach them as model.data;
 
-        xreal_1d = np.array([1,1, 0.5, 0.5,0.1])
-        nterms = xreal_1d.size
-        profile = gauss
-        profile_xdata = np.linspace(-10,10,nz)
-        sigma=0.02
+        3- run fitres = model.fit(xtest);
 
-        rng = np.random.default_rng(3)
+        4- compute reduced chi2 of fitted model.
 
-        xreal = np.zeros((nx,ny,nterms))
-        for i in range(nx):
-            for j in range(ny):
-                xreal[i,j,:] = xreal_1d
+        Parameters
+        ----------
+        model : cubefit.cubemodel.CubeModel
+            The model to test.
+        shape : tuple
+            Shape of the data cube to generate.
+        xreal : array_like
+            Model parameters to produce "true" cube, can have one or
+            three dimensions. If 3D, used as-is. If 1D, reproduced for
+            each pixel of the field.
+        xtest : array_like
+            Initial guess to fit model, can have one or three
+            dimensions. If 3D, used as-is. If 1D, reproduced for each
+            pixel of the field.
+        sigma
+            Standard deviation of noise to add to "true" cube to get
+            mock observational data.
+        **fit_kwargs : dict, optional
+            Any additional keyword argument is passed to model.fit().
 
-        if dbg:
-            print(f" xreal[4,4,:]{xreal[4,4,:]}")
+        Returns
+        -------
+        real number
+            reduced chi2 of fit
+        tuple
+            return value of model.fit()
 
-        # create model object
-        if dbg:
-            print("creating fit obj")
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata)
+        Raises
+        ------
+        ValueError
+            when an inconsistency is detected between the value of
+            parameter shape and the shape of parameters xreal and
+            xtest
+
+        """
+        # get data dimensions
+        nx, ny, nz = shape
+
+        # Check whether a vector or stack was provided for xreal.
+        # If a vector, build the stack.
+        # If a stack, check dimensions.
+        if len(np.shape(xreal)) == 1:
+            nterms = len(xreal)
+            xreal_1d = xreal
+            xreal = np.zeros((nx,ny,nterms))
+            for i in range(nx):
+                for j in range(ny):
+                    xreal[i,j,:] = xreal_1d
+        elif len(np.shape(xreal)) == 3:
+            nterms = np.shape(xreal)[2]
+            if np.shape(xreal)[0] != nx or np.shape(xreal)[1] != ny:
+                raise ValueError("inconsistency between np.shape(xreal) and shape")
+        else:
+            raise ValueError("xreal has wrong shape")
+
+        # Same for xtest
+        if len(np.shape(xtest)) == 1:
+            nterms = len(xtest)
+            xtest_1d = xtest
+            xtest = np.zeros((nx,ny,nterms))
+            for i in range(nx):
+                for j in range(ny):
+                    xtest[i,j,:] = xtest_1d
+        elif len(np.shape(xtest)) == 3:
+            nterms = np.shape(xtest)[2]
+            if np.shape(xtest)[0] != nx or np.shape(xtest)[1] != ny:
+                raise ValueError("inconsistency between xtest.shape and shape")
+        else:
+            raise ValueError("xtest has wrong shape")
 
         # create "true" cube using model
-        if dbg:
-            print("create model cube...")
         cube_real = model.model(xreal)
 
         # add noise to get mock observational data
         data = add_noise(cube_real, sigma)
 
-        # write fits cube
-        if dbg:
-            write_fits(cube_real, "mycube_model_gauss.fits")
-            write_fits(data, "mycube_gauss.fits")
-            print("check cube")
-            print(f"{cube_real[4,4,:]}")
-            print(f"============#debug eval")
-
         # Attach data to model object
         model.data=data
 
-        # create initial guess
-        x0 = xreal
-
-        # tiré de l exemple
-        # besoin fonction objectif (param 1)  gradient (param 2)
-        # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
-        #            mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
-
-        (res_x, fx, gx, status) = model.fit(x0)
+        # perform fit
+        fitres = model.fit(xtest, **fit_kwargs)
 
         # build best model cube
+        res_x=fitres[0]
         model_cube=model.model(res_x)
         # compute reduced chi2
         chi2=np.sum(((data-model_cube)/sigma)**2)/(data.size-res_x.size)
-        # raise error is chi2 not close to 1
+
+        # return chi2 and fit results
+        return (chi2, fitres)
+
+    def test_cubemodel_fit_gauss(self, dbg=False):
+        # Shape of data cube (nx, ny, nz)
+        nx, ny, nz = (5, 5, 433)
+        # Model we want to test
+        model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz))
+        # Parameters for "true" cube. Can be 1D or 3D.
+        xreal_1d = (1,1, 0.5, 0.5,0.1)
+        # Initial guess for fit. Can be 1D or 3D.
+        xtest_1d = xreal_1d
+        # Sigma of errors to add to "true" cube to get "observational" data
+        sigma=0.02
+
+        # Call helper
+        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz), xreal_1d, xtest_1d, sigma)
+
+        # At this stage, perform some verifications on chi2 and/testres.
+        # For instance: raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
 
-        # write_fits(res_x, "mycube_res_x_gauss.fits")
-        # write_fits(fx, "mycube_res_fx_dop.fits")
-        # write_fits(gx, "mycube_res_gx_dop.fits")
-        if dbg:
-            print(f"fx {fx}")
-            print(f"gx {gx}")
-            print(f"status {status}")
+    def test_cubemodel_fit_dopplerlines(self, dbg=False):
+        # Shape of data cube (nx, ny, nz)
+        nx, ny, nz = 5, 4, 433
 
-    def test_cubemodel_fit(self, dbg=False):
-        """
-        test_cubemodel_fit
-        implementation of the fit function test
-        """
-        # debug model
-        if dbg:
-            print("starting cubemodel test_fit....")
-        # create a cube
-        nx = 5
-        ny = 5
-        nz = 433
+        # Model we want to test
+        profile = DopplerLines(2.166120, profile=ngauss)
+        profile_xdata = np.linspace(2.15, 2.175, nz)
+        model = CubeModel(profile=profile, profile_xdata=profile_xdata)
 
-        if dbg:
-            print("create model ...")
+        # Parameters for "true" cube. Can be 1D or 3D.
+        xreal_1d=(1.2, 0.5, 25., 100)
 
-        cube_doppler = np.ndarray((nx, ny, nz))
-        cube_noise_doppler = np.ndarray((nx, ny, nz))
-        weight = np.ones((nx, ny, nz))
-        if dbg:
-            print("test doppler ...")
-        # nlines = 1
-        lines = np.array([2.166120])
-        doppler_param = np.array([1.2, 0.5, 25., 100])
-        doppler_xdata = np.linspace(2.15, 2.175, nz)
+        # Initial guess for fit. Can be 1D or 3D.
+        xtest_1d = (1.1, 1., 25., 100)
 
-        if dbg:
-            print("creating line obj")
-        lineobj_doppler = DopplerLines(lines, profile=ngauss)
-
+        # Sigma of errors to add to "true" cube to get "observational" data
         sigma = 0.2
 
-        model_param_doppler = np.zeros((nx, ny, doppler_param.size))
+        # Call helper
+        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz), xreal_1d, xtest_1d, sigma, fmin=0.)
 
-        # TODO find a more pythonic expression
-        for i in range(doppler_param.size):
-            model_param_doppler[:, :, i] = doppler_param[i]
-
-        # TODO choose return tuple or not
-        fcn_doppler = lineobj_doppler.__call__
-        fcn_x_doppler = doppler_xdata
-
-        if dbg:
-            print("creating fit obj")
-        # create fit obj
-        fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
-                                       fcn_x_doppler, weight)
-        # model
-        if dbg:
-            print("compute model ...")
-        cube_model_doppler = fitobj_doppler_model.model(model_param_doppler)
-        # add noise
-        cube_noise_doppler = add_noise(cube_model_doppler, sigma)
-
-        if dbg:
-            write_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
-            write_fits(cube_noise_doppler, "mycube_doppler_fit.fits")
-
-        #print("check fits")
-        #open_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
-        # print("diff noise - model")
-        # print(f"{cube_noise_doppler[49,49,:] - cube_model_doppler[49,49,:]}")
-
-        if dbg:
-            print("check cube")
-            print(f"{cube_model_doppler[4,4,:]}")
-
-        # debug view
-        # fitobj_doppler.view(cube_model_doppler)
-
-        # debug eval
-        if dbg:
-            print(f"============#debug eval")
-
-        # TODO nz=433
-        cube_empty = np.ndarray((nx, ny, nz))
-
-        # on recree un obj cubemodel
-        fitobj_eval_doppler = CubeModel(cube_noise_doppler,
-                                      fcn_doppler, fcn_x_doppler, weight)
-
-        doppler_param_test = np.array([1.1, 1., 25., 100])
-        #doppler_param_test = np.array([1.2, 0.5, 25., 100])
-        model_param_doppler_test = np.zeros((nx, ny, doppler_param_test.size))
-
-        # TODO find a more pythonic expression
-        for i in range(doppler_param_test.size):
-            model_param_doppler_test[:, :, i] = doppler_param_test[i]
-
-
-        # calcul du point de depart x0 les cartes de parametres initiales
-        # x0 = cube_noise_doppler
-        x0_test = model_param_doppler_test
-
-        if dbg:
-            print(f"x0_test {x0_test}")
-            print(f"calling fit function")
-
-        (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0_test, fmin=0.)
-
-        # build best model cube
-        cube_model=fitobj_eval_doppler.model(res_x)
-        # compute reduced chi2
-        chi2=np.sum(((cube_noise_doppler-cube_model)/sigma)**2)/(cube_noise_doppler.size-res_x.size)
+        # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
 
+    def test_cubemodel_fit_dopplerlines2(self, dbg=False):
+        # Shape of data cube (nx, ny, nz)
+        nx, ny, nz = 5, 4, 433
 
-        if dbg:
-            print("# Iter.   Time (ms)   Eval. Reject.    Obj. Func.      Grad.  Step")
-            print("res_x for test_fit")
-            print(f"{res_x}")
-            print(f"fx {fx}")
-            print(f"gx {gx}")
-            print(f"status {status}")
+        # Model we want to test
+        profile = DopplerLines(2.166120, profile=ngauss)
+        profile_xdata = np.linspace(2.15, 2.175, nz)
+        model = CubeModel(profile=profile, profile_xdata=profile_xdata)
 
-    def test_cubemodel(self, dbg=False):
-        """
-        test_cubemodel
-        #fitobj = cubemodel(new, cube = cubl(,,indlines), weight = noise,
-        #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
-        #                 scale=scale, delta=delta, regularisation=cubemodel.l1l2,
-        #                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
-            'cube', 'weight', 'fcn', 'fcn_x',
-            'scale', 'delta', 'pscale', 'poffset', and 'ptweak'
-        """
-        # scaling parameters
-        # scale = np.array([1., 1., 1])
-        # print(f"scale {scale}")
-        # delta   =             [ 1.   ,   1. ,   1.   ]
-        # delta = 1./scale
-        # print(f"delta {delta}")
-        # poffset
-        # poffset = np.array([0., 0, 0])
-        # print(f"poffset {poffset}")
-        # pscale
-        # pscale = np.array([5e-5, 100., 40.])
+        # Parameters for "true" cube. Can be 1D or 3D.
+        xreal_1d=(1.2, 0.5, 25., 100)
 
-        # debug model
-        if dbg:
-            print("starting cubemodel test....")
-        # create a cube
-        nx = 5
-        ny = 5
-        nz = 433
+        # Initial guess for fit. Can be 1D or 3D.
+        xtest_1d = xreal_1d
 
-        if dbg:
-            print("create model ...")
-        weight = np.ones((nx, ny, nz))
-
-        cube_doppler = np.ndarray((nx, ny, nz))
-        cube_noise_doppler = np.ndarray((nx, ny, nz))
-
-        if dbg:
-            print("test doppler ...")
-        # choose parameter for model
-        # nlines = 1
-        lines = np.array([2.166120])
-        # lines=np.array([2.166120,2.155])
-
-        doppler_param = np.array([1.2, 0.5, 25., 100])
-        doppler_xdata = np.linspace(2.15, 2.175, nz)
-
-        if dbg:
-            print("creating line obj")
-        lineobj_doppler = DopplerLines(lines, profile=ngauss)
-
-        if dbg:
-            print("after doppler init")
+        # Sigma of errors to add to "true" cube to get "observational" data
         sigma = 0.5
-        if dbg:
-            print("test doppler call")
-        # instanciate a random number generator with fixed seed
-        # warning: changing the seed may affect the success of certain tests below
-        rng = np.random.default_rng(3)
 
-        lineobj_doppler(doppler_xdata, *doppler_param)[0] \
-            + rng.standard_normal(nz) * sigma
+        # Call helper
+        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz), xreal_1d, xtest_1d, sigma)
 
-        model_param_doppler = np.zeros((nx, ny, doppler_param.size))
-
-        # print(f"doppler_param is {doppler_param}")
-
-        # TODO find a more pythonic expression
-        for i in range(doppler_param.size):
-            model_param_doppler[:, :, i] = doppler_param[i]
-
-        # print("creating line obj")
-        # lineobj_doppler = DopplerLines(lines=lines, waxis=doppler_xdata,
-        #                               profile=ngauss)
-
-        # TODO choose return tuple or not
-        # fcn_doppler = lineobj_doppler.curvefit_func
-        fcn_doppler = lineobj_doppler.__call__
-        # fcn_x=a0
-        # important
-        fcn_x_doppler = doppler_xdata
-
-        if dbg:
-            print("creating fit obj")
-        # create fit obj
-        fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
-                                       fcn_x_doppler, weight)
-        # print(f"cube shape {cube.shape}")
-        # print(f"cube_noise shape {cube_noise.shape}")
-
-        # test more parameters
-        # fitobj=cubemodel(cube,cube_noise,fcn,fcn_x,scale, delta,
-        #            pscale,poffset, ptweak,regularisation=None,decorrelate=None)
-
-        # model
-        # cube_model=fitobj.model(cube,a0)
-        if dbg:
-            print("compute model ...")
-        cube_model_doppler = fitobj_doppler_model.model(model_param_doppler)
-
-        # add noise
-
-        cube_noise_doppler = add_noise(cube_model_doppler, sigma)
-
-        # print_array_slice(cube_noise_doppler)
-        # print_array_slice(cube_noise_gauss)
-
-        if dbg:
-            write_fits(cube_model_doppler, "mycube_model_doppler.fits")
-            write_fits(cube_noise_doppler, "mycube_doppler.fits")
-
-        #print("check fits")
-        #open_fits(cube_model_doppler, "mycube_model_doppler.fits")
-        # print("diff noise - model")
-        # print(f"{cube_noise_doppler[49,49,:] - cube_model_doppler[49,49,:]}")
-
-        if dbg:
-            print("check cube")
-            print(f"{cube_model_doppler[4,4,:]}")
-
-        # debug view
-        # fitobj_doppler.view(cube_model_doppler)
-
-        # debug eval
-        if dbg:
-            print(f"============#debug eval")
-
-        # TODO nz=433
-        cube_empty = np.ndarray((nx, ny, nz))
-
-        # on recree un obj cubemodel
-        fitobj_eval_doppler = CubeModel(cube_noise_doppler,
-                                      fcn_doppler, fcn_x_doppler, weight)
-
-
-        # tiré de l exemple
-        # f = eval(f"fitobj_eval.eval")
-        # x0 = f(0, n=n, factor=factor)
-
-        # calcul du point de depart x0 les cartes de parametres initiales
-        # x0 = cube_noise_doppler
-        x0 = model_param_doppler
-
-
-        if dbg:
-            print(f"calling vmlmb")
-        #def vmlmb_printer(output, iters, evals, rejects, t, x, fx, gx, pgnorm, alpha, fg):
-        # print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
-        # ---------------------------------------------------------------------------------
-        # besoin fonction objectif (param 1)  gradient (param 2)
-        # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
-        #         mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
-        print()
-        (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0)
-
-        # build best model cube
-        cube_model=fitobj_eval_doppler.model(res_x)
-        # compute reduced chi2
-        chi2=np.sum(((cube_noise_doppler-cube_model)/sigma)**2)/(cube_noise_doppler.size-res_x.size)
+        # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
-
-        # print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
-        if dbg:
-            print("res_x for dop")
-            print(f"{res_x}")
-        #write_fits(res_x, "mycube_res_x_dop.fits")
-        #write_fits(fx, "mycube_res_fx_dop.fits")
-        #write_fits(gx, "mycube_res_gx_dop.fits")
-        if dbg:
-            print(f"fx {fx}")
-            print(f"gx {gx}")
-            print(f"status {status}")
-
-        # def test(probs = range(1, 19),  n=None, factor=None, fmin=0,
-        #    mem="max", verb=1, blmvm=False, output=sys.stdout, **kwds)
-        # test(verb=1, gtol=0, xtol=0, ftol=0, fmin=0, mem="max")
-
-        # from test_fit-Brg4
-        # xl1 = fitobj.fit( xl, verb=1, xmin=xmin, xmax=xmax);
-
 
 if __name__ == '__main__':
    unittest.main()
