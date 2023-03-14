@@ -420,9 +420,9 @@ class CubeModel:
             Whether to scale parameters according to poffset and
             pscale. Always False during a fit, but should generally be
             set to True when calling the method manually. Note that
-            noscale only affects how x is evaluatedinterpreted: the
-            computation of the gradient still takes pscale and poffset
-            into account. This way the user can get the value of the
+            noscale only affects how x is interpreted: the computation
+            of the gradient still takes pscale and poffset into
+            account. This way the user can get the value of the
             gradient that is seen by the fitting routine. If in doubt,
             rescale x using self.normalize_parameters and set noscale
             to False.
