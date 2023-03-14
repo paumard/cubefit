@@ -104,12 +104,16 @@ class TestCubemodel(unittest.TestCase):
 
 
     def test_cubemodel_eval_no_data_raises(self):
+        '''Check that CubeModel.eval raises an error when self.data is not set
+        '''
         model=CubeModel()
         x="whatever"
         with self.assertRaises(ValueError, msg="CubeModel.eval() should raise a Value Error when data is None"):
             model.eval(x)
 
     def test_cubemodel_gradient(self):
+        '''Check that CubeModel.eval evaluates the gradient correctly
+        '''
         nx, ny, nz = 5, 5, 433
 
         xreal_1d = np.array([1.2, 0.5, 25., 100])
@@ -239,6 +243,8 @@ class TestCubemodel(unittest.TestCase):
         return (chi2, fitres)
 
     def test_cubemodel_fit_gauss(self, dbg=False):
+        '''Check that CubeModel.fit succeeds (flavor: gauss)
+        '''
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = (5, 5, 433)
         # Model we want to test
@@ -258,6 +264,8 @@ class TestCubemodel(unittest.TestCase):
         self.assertAlmostEqual(chi2, 1, places=1)
 
     def test_cubemodel_fit_dopplerlines(self, dbg=False):
+        '''Check that CubeModel.fit succeeds (flavor: dopplerlines)
+        '''
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = 5, 4, 433
 
@@ -283,6 +291,8 @@ class TestCubemodel(unittest.TestCase):
         self.assertAlmostEqual(chi2, 1, places=1)
 
     def test_cubemodel_fit_dopplerlines2(self, dbg=False):
+        '''Check that CubeModel.fit succeeds (flavor: dopplerlines2)
+        '''
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = 5, 4, 433
 
@@ -306,6 +316,60 @@ class TestCubemodel(unittest.TestCase):
         # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
+
+    def test_cubemodel_pscale_poffset(self):
+        '''Check that CubeFit.eval() and model() takes pscalea and poffset
+        '''
+        nx, ny, nz = 5, 5, 101
+
+        xreal_1d = np.array([1.2, 2.1701e-6, 1.9e-10])
+        xtest_1d = np.array([1.1, 2.1703e-6, 2.5e-10])
+        nterms = len(xreal_1d)
+        xreal = np.zeros((nx, ny, xreal_1d.size))
+        xtest = np.zeros((nx, ny, xreal_1d.size))
+        for k in range(nterms):
+            xreal[:, :, k]=xreal_1d[k]
+            xtest[:, :, k]=xtest_1d[k]
+
+        waxis = np.linspace(2.16e-6, 2.18e-6, nz)
+
+        poffset=np.asarray([1., 2.17e-6, 2e-10])
+        pscale =np.asarray([1e-1, 1e-10, 1e-11])
+        # Also test that auto-broadcasting works like explicit
+        xreal_normed=(xreal-poffset)/pscale
+        xtest_normed=(xtest-poffset[np.newaxis, np.newaxis, :])/pscale[np.newaxis, np.newaxis, :]
+
+        profile = gauss
+        model = CubeModel(profile=profile, profile_xdata=waxis)
+        model.data = model.model(xreal)
+        val = model.criterion(xtest)
+
+
+        # Check that model() behaves correctly with pscale and poffset not set
+        self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
+        self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=False)))), 0)
+
+        # Set pscale and poffset
+        model.pscale  = pscale
+        model.poffset = poffset
+
+        # Check that eval() behaves correctly with pscale and poffset set
+        self.assertEqual(model.criterion(xreal, noscale=True), 0,
+                          "Criterion for xreal_normed should be 0")
+        self.assertEqual(model.criterion(xreal_normed), 0,
+                          "Criterion for xreal_normed should be 0")
+        self.assertEqual(model.criterion(xtest, noscale=True), val,
+                          f"Criterion for xtest_normed should be {val}")
+        self.assertEqual(model.criterion(xtest_normed), val,
+                          f"Criterion for xtest_normed should be {val}")
+
+        self.check_gradient(model.eval, xtest_normed)
+
+        # Check that model() behaves correctly with pscale and poffset set
+        self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
+        self.assertEqual((np.max(np.abs(model.data-model.model(xreal_normed, noscale=False)))), 0)
+
+
 
 if __name__ == '__main__':
    unittest.main()

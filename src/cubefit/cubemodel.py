@@ -252,7 +252,7 @@ class CubeModel:
         # colorbar, min(x(,,k))*psc(k)+pof(k),max(x(,,k))*psc(k)+pof(k)
         #plt.pause(1)
 
-    def model(self, params, noscale=None):
+    def model(self, params, noscale=False):
         """
         DOCUMENT
         model_cube = fitobj(model, x)
@@ -266,51 +266,14 @@ class CubeModel:
         SEE ALSO: cubefit, view
 
         """
-    # /!\ WARNING: this function is for visualisation, it is "inlined" in eval
-    #  for optimization
-        if self.dbg:
-            print("DBG CALL model")
-            print(f"with params[4,4,:] {params[4,4,:]}")
-            print(f"with params shape {params.shape}")
-
+        # /!\ WARNING: this function is for visualisation, it is "inlined" in eval
+        #  for optimization
         params_dim = params.shape
-        # d = len(x)
-   #     print(f"params_dim {params_dim}")
 
-        # TODO for debug purpose dont scale
-        noscale = 1
-
-        # if (noscale is not None):
-        if (noscale):
-            psc = np.ones(params_dim[2])
-            pof = np.zeros(params_dim[2])
-            if self.dbg:
-                print(f"psc {psc}")
-                print(f"pof {pof}")
-
-        else:
-            psc = self.pscale
-            pof = self.poffset
-            if self.dbg:
-                print(f"noscale {noscale}")
-                print(f"psc {psc}")
-                print(f"pof {pof}")
-
-        if (psc is None):
-            if self.dbg:
-                print("psc is None")
+        if noscale:
             xs = params
         else:
-            # xs = x * psc(-,-,)
-            xs = params * psc
-            #xs = params * psc[np.newaxis, np.newaxis, :]
-            if self.dbg:
-                print(f"xs {xs}")
-
-        if (pof is not None):
-            #xs += pof(-,-,);
-            xs += pof[np.newaxis, np.newaxis, :]
-            #xs += np.reshape(pof, (1, 1, pof.shape[0]))
+            xs = self.denormalize_parameters(params)
 
         if (self.ptweak is not None):
             # TODO use_method, ptweak, xs, derivatives
@@ -355,59 +318,16 @@ class CubeModel:
     ## denormalize paramaters from -1,1 boundaries to physical unit
     # see normalize comment
     def denormalize_parameters(self, x):
-        """
-        apply offset and scale and returnmaps for checking ?
-        ie noscale = 1 returnmaps = 1
-        """
-
-        if self.dbg:
-            print("DBG CALL denormalize parameters with x")
-            print("apply_offset_scale with x")
-            print(f"{x}")
-            #print(f"x[49,49,:]{x[49,49,]}")
-            #print(f"x[50,50,:]{x[50,50,]}")
-            #print(f"x[51,51,:]{x[51,51,]}")
-
-            print(f"with pscale {self.pscale}")
-            print(f"with poffset {self.poffset}")
-
-            print(f"with scale {self.scale}")
-            print(f"with delta {self.delta}")
-
-
-        # d = x.shape
-        # nx = d[0]
-        # ny = d[1]
-        # res = 0.
-
+        '''De-apply pscale and poffset from normalized parameters x
+        '''
+        # Note: self.pscale and poffset are broadcast automatically
         if (self.pscale is None):
-            # which x ?
-            xs = x
+            xs = x.copy()
         else:
-            if self.dbg:
-                print(f"shape pscale {self.pscale.shape}")
-                print(f"pscale {self.pscale}")
-                print(f"pscale[0] {self.pscale[0]}")
-                print(f"shape x {x.shape}")
-                print(f"x[0,0,:] {x[0,0,:]}")
-                print(f"x[50,50,:] {x[50,50,:]}")
-                # print(f"shape xs {xs.shape}")
-            #TODO faire une boucle
-            # ValueError: operands could not be broadcast together
-            # with shapes (433,206,197) (1,1,3)
-            # is xs = x * pscale(-,-,) in yorick
-            #xs = x * np.reshape(self.pscale,(1,1,self.pscale.shape[0]))
-            # xs = x * self.pscale[np.newaxis,np.newaxis,:]
-            # xs = x[1:,:,:] * self.pscale[:, np.newaxis,np.newaxis]
-            xs = x * self.pscale[np.newaxis,np.newaxis,:]
-
-            #or k in range(x[]):
-            #    xs[k,:] *= self.pscale
-
+            xs = x * self.pscale
 
         if (self.poffset is not None):
-            # xs += np.reshape(self.poffset,(1,1,self.poffset.shape[0]))
-            xs += self.poffset[np.newaxis,np.newaxis,:]
+            xs += self.poffset
 
         return xs
 
@@ -443,39 +363,14 @@ class CubeModel:
 #         # //  plg, tot
 #
     def normalize_parameters(self, x):
-        #  if (noscale) {
-        #     x = x; // copy input in order to not modify it!
-        #     if (!is_void(psoffset)) x(..,) -= poffset(-,-,);
-        #     if (!is_void(pscale))   x(..,) /= pscale(-,-,);
-        # }
-
-        if self.dbg:
-            print("DBG CALL normalize parameters with x")
-        # normalize paramaters put roughly in -1,1 boundaries according to user
-        # expectation
-        #x = np.array(x)
+        '''Apply pscale and poffset to parameters x
+        '''
+        # Note: self.pscale and poffset are broadcast automatically
         x_norm = np.copy(x)
-        #print(f"x[49,49,:]{x[49,49,]}")
-        #print(f"x[50,50,:]{x[50,50,]}")
-        #print(f"x[51,51,:]{x[51,51,]}")
-
-        #print(f"with pscale {self.pscale}")
-        #print(f"with poffset {self.poffset}")
-
-        #print(f"with scale {self.scale}")
-        #print(f"with delta {self.delta}")
-
-
-        # nx = (d=dimsof(x))(0)
-        # d = x.shape
-        # nx = x.shape[0]
-        #nx = len(x.shape)
-        if self.psoffset is not None:
-            #x[:,:,] -= self.poffset[np.newaxis,np.newaxis,:]
-            x_norm -= self.poffset[np.newaxis,np.newaxis,:]
+        if self.poffset is not None:
+            x_norm -= self.poffset
         if self.pscale is not None:
-            #x[:,:,] /= self.pscale[np.newaxis,np.newaxis,:]
-            x_norm /= self.pscale[np.newaxis,np.newaxis,:]
+            x_norm /= self.pscale
 
         return x_norm
 
@@ -764,8 +659,10 @@ class CubeModel:
 
         print(f"")
 
-    def criterion(self, x):
-        return self.eval(x)[0]
+    def criterion(self, x, noscale=False):
+        '''self.eval(x, noscale=noscale)[0]
+        '''
+        return self.eval(x, noscale=noscale)[0]
 
     # __call__ ??  *fout *gout mis a None pour dbg
     # fout gout
