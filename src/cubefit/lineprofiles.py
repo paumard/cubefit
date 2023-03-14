@@ -31,7 +31,7 @@ def gauss(x, *a):
     ----------
     x : array_like
         Independent variable, for instance wavelengths for which the
-        profile must be computed. Can be a scalar or 1D array.
+        profile must be computed.
     a : array_like
         Parameters of the Gaussian: (I0, x0, dx [, offset [, slope]]) with:
         I0: peak value
@@ -64,26 +64,12 @@ def gauss(x, *a):
     --------
     cubefit.lineprofiles.ngauss
     '''
-    a = np.asarray(a, dtype=np.float64)
-
-     # a forcement tableau
-    #print("gauss call with parameters")
-    #print(f"x is {x}")
-    #print(f"a is {a}")
-    #print(f"type(a){type(a)}")
-    #print(f"a.size is {a.size}")
-
-    # print(f"a0 is {a[0]}")
-    # print(f"a1 is {a[1]}")
-    # print(f"a2 is {a[2]}")
-
-
-    if np.isscalar(x):
-        x = np.asarray((x,), dtype=np.float64)
-        scalar_x = True
-    else:
-        x = np.asarray(x, dtype=np.float64)
-        scalar_x = False
+    # ensure a and x are numpy arrays and not some other array_like
+    # promote to at least float64
+    a = np.asarray(a)
+    a = np.promote_types(a.dtype, np.float64).type(a)
+    x = np.asarray(x)
+    x = np.promote_types(x.dtype, np.float64).type(x)
 
     nterms = a.size
 
@@ -102,14 +88,14 @@ def gauss(x, *a):
     res = a[0]*u1
 
     # if deriv:
-    grad = np.zeros(x.shape + (nterms,))
-    grad[:, 0] = u1
-    grad[:, 1] = res*(x-a[1])/a[2]**2
-    grad[:, 2] = res*(x-a[1])**2/a[2]**3
+    grad = np.zeros(np.shape(x) + (nterms,))
+    grad[..., 0] = u1
+    grad[..., 1] = res*(x-a[1])/a[2]**2
+    grad[..., 2] = res*(x-a[1])**2/a[2]**3
     if (nterms > 3):
-        grad[:, 3] = 1.
+        grad[..., 3] = 1.
     if (nterms == 5):
-        grad[:, 4] = x
+        grad[..., 4] = x
 
     # print("inside gauss_jac")
     # print(f"x {x}")
@@ -121,10 +107,6 @@ def gauss(x, *a):
     if (nterms == 5):
         res = res+a[4]*x
 
-    if scalar_x:
-        res=res[0]
-        grad=grad[0, :]
-
     return res, grad
 
 
@@ -135,7 +117,7 @@ def ngauss(x, *a):
     ----------
     x : array_like
         Independent variable, for instance wavelengths for which the
-        profile must be computed. Can be a scalar or 1D array.
+        profile must be computed.
     a : array_like
         Parameters of the Gaussian: (Sum, x0, dx [, offset [, slope]]) with:
         Sum: integral of the Gaussian
@@ -173,14 +155,12 @@ def ngauss(x, *a):
     cubefit.lineprofiles.gauss
     '''
 
+    # ensure a and x are numpyt arrays and not some other array_like
+    # promote to at least float64
     a = np.asarray(a)
-
-    if np.isscalar(x):
-        x = np.asarray((x,), dtype=np.float64)
-        scalar_x = True
-    else:
-        x = np.asarray(x, dtype=np.float64)
-        scalar_x = False
+    a = np.promote_types(a.dtype, np.float64).type(a)
+    x = np.asarray(x)
+    x = np.promote_types(x.dtype, np.float64).type(x)
 
     sqrt2pim1 = 1/sqrt(2*np.pi)
 
@@ -200,12 +180,8 @@ def ngauss(x, *a):
 
     # grad = gauss_jac(x, *a)
 
-    grad[:, 2] -= I0*sigmam1*grad[:, 0]
-    grad[:, 0] *= eqwidthm1
-
-    if scalar_x:
-        res=res[0]
-        grad=grad[0, :]
+    grad[..., 2] -= I0*sigmam1*grad[..., 0]
+    grad[..., 0] *= eqwidthm1
 
     return res, grad
 
