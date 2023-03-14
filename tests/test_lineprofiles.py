@@ -1,5 +1,5 @@
 from .common import *
-from cubefit.lineprofiles import gauss, ngauss
+from cubefit.lineprofiles import gauss, ngauss, WrapToCurveFit
 
 class TestGauss(Test1DModel):
     '''UnitTest class to test gauss function
@@ -61,6 +61,27 @@ class TestNGauss(Test1DModel):
         a = [1. , 1. , 0.5, 0.5, 0.1]
         x = np.linspace(-10, 10, 3000)
         self.check_jacobian(ngauss, x, *a)
+
+class TestCurveFitWrappers(Test1DModel):
+    def test_wrap(self):
+        origfunc=gauss
+        cvfitfunc = WrapToCurveFit(origfunc)
+        cbfitfunc_num = WrapFromCurveFit(cvfitfunc)
+        cbfitfunc_ana = WrapFromCurveFit(cvfitfunc, cvfitfunc.jac)
+        a = [1. , 1. , 0.5, 0.5, 0.1]
+        x = np.linspace(-10, 10, 3000)
+        origval, origjac = origfunc(x, *a)
+        cvval, cvjac=cvfitfunc(x, *a), cvfitfunc.jac(x, *a)
+        cbnval, cbnjac=cbfitfunc_num(x, *a)
+        cbaval, cbajac=cbfitfunc_ana(x, *a)
+        for k in range(np.size(origval)):
+            self.assertEqual(origval[k], cvval[k])
+            self.assertEqual(origval[k], cbnval[k])
+            self.assertEqual(origval[k], cbaval[k])
+            for l in range(np.size(a)):
+                self.assertEqual(origjac[k, l], cvjac[k, l])
+                self.assertAlmostEqual(origjac[k, l], cbnjac[k, l])
+                self.assertEqual(origjac[k, l], cbajac[k, l])
 
 if __name__ == '__main__':
    unittest.main()
