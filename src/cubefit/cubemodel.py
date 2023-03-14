@@ -68,45 +68,79 @@ scratch = save(scratch,
 
 
 class CubeModel:
-    """
-    CubeModel class
+    """Spectro-imaging data model
 
-    CubeModel is an OXY class for designed for spectral fitting with
-    spatial regularisation in a spectro-imaging context.
+    The CubeModel class is designed for spectral fitting with spatial
+    regularisation in a spectro-imaging context.
 
-    The 3D model is based on a 1D model and 2D parameter maps. The 2D
-           maps are regularised (using by default an L1L2 regularisation).
+    The 3D model is based on a 1D model (called profile) and 2D
+    parameter maps. The 2D maps are regularised (using by default an
+    L1L2 regularisation).
 
-           The estimator is a compound of a chi^2 (based on the 1D model), a
-           regularisation term (based of the 2D regularisation of the various
-           2D parameter maps) and an optional decorrelation term (based on the
-           crosscorrelation of specific pairs of paramter maps).
+    The estimator is a compound of a chi^2 (based on the 1D model), a
+    regularisation term (based of the 2D regularisation of the various
+    2D parameter maps) and an optional decorrelation term (based on
+    the crosscorrelation of specific pairs of paramter maps).
 
-       MEMBERS
-         data:   the data to fit, a NX x NY x NZ array. The spectra are in
-                 the Z dimension.
-         weight: optional (defaults to nil). An array with the same
-                 dimensions as DATA, giving the relative weights of the
-                 data points for fitting. Set to 0. for points to ignore
-                 altogether. For Gaussian noise, this should be set to
-                 data root-mean-square (beware: this is the square root of
-                 what lmfit expects).
-         fcn:    an LMFIT compatible 1D model function:
-                  model_1d = fcn(fcn_x, parameters, grad, deriv=1)
-                 model_1d must be an array(double, NZ).
-         fcn_x:  whatever FCN accepts as its first positional
-                 argument. Often a wavelength axis, sometimes a complex
-                 object, possibly nil.
-         regularisation: the regularisation function to use, by default
-                 cubemodel.l1l2. Any function with the same prototype as
-                 l1l2 or markov is suitable. Set regularisation to nil
-                 remove regularisation entirely. Default: cubemodel.markov.
-         decorrelate: pairs of map ID for which the cross-correlation
-                 should ba minimal together with weight, e.g. decorrelate
-                 = [1, 2, 0.4] if the maps for parameters 1 and 2 should
-                 not be correlated, with a weight of 0.4 relative to the
-                 other terms of the estimator.
-         scale, delta, pscale, poffset, ptweak: should be documented.
+    Attributes
+    ----------
+    data : array_like, optional
+        The data to fit, a NX x NY x NZ array. Mandatory to call
+        methods eval() and fit(). The spectra are in the Z dimension.
+    weight: array_like, optional
+        An array with the same dimensions as data, giving the relative
+        weights of the data points for fitting. Set cell to 0. for
+        points to ignore altogether. For Gaussian noise, this should
+        be set to data standard deviation. Defaults to None, in which
+        case it is uniformly initialized to 1. the first time eval ()
+        is called.
+    profile : callable
+        1D model function with signature
+           profile(xdata, *params) -> ydata, Jacobian
+    profile_xdata
+        whatever profile accepts as its first positional
+        argument. Often a wavelength axis, sometimes a complex object,
+        possibly None.
+    regularisation: callable, optional
+        The regularisation function to use, by default
+        cubefit.cubemodel.markov. Any function with the same prototype
+        as l1l2 or markov is suitable. Set regularisation to None
+        remove regularisation entirely.
+    decorrelate : UNIMPLEMENTED
+        pairs of map ID for which the cross-correlation should ba
+        minimal together with weight, e.g. decorrelate = [1, 2, 0.4]
+        if the maps for parameters 1 and 2 should not be correlated,
+        with a weight of 0.4 relative to the other terms of the
+        estimator.
+    pscale : {None, array_like}
+        A vector with the same size as the params argument of the
+        profile function. If not None, the parameters will be
+        automatically devided and multiplied by this amount so the
+        fitting engine only manipulates rescaled parameters. This
+        helps some fitting engines to behave properly.
+    poffset : {None, array_like}
+        A vector with the same size as the params argument of the
+        profile function. If not None, the parameters will be
+        automatically devided and multiplied by this amount so the
+        fitting engine only manipulates rescaled parameters. This
+        helps some fitting engines to behave properly.
+    ptweak : callable
+        A function to add instrumental signature to the parameters,
+        with signature
+            pteak(params) -> derivatives
+        Should modify the parameters in place and return the
+        derivatives. At the moment, these modifications of the
+        parameters should not introduce correlations (because only the
+        derivative of each parameter is returned, not a full Jacobian
+        matrix). Possible usage includes adding a per-pixel velocity
+        offset or modify linewidth to mimick convolution by a spectral
+        PSF.
+    scale
+        UNDOCUMENTED
+    delta
+        UNDOCUMENTED
+    dbg : bool
+        Whether to activate debugging output.
 
     METHODS
          These methods can be called as
@@ -160,6 +194,7 @@ class CubeModel:
 
     SEE ALSO: oxy, METHOD, FUNCTION, op_mnb, lmfit
     */
+
     """
     # TODO important apres premiere phase , regularisation et ptweak
     #
@@ -275,12 +310,8 @@ class CubeModel:
         else:
             xs = self.denormalize_parameters(params)
 
-        if (self.ptweak is not None):
-            # TODO use_method, ptweak, xs, derivatives
-            # xs et derivatives
-
-            xs, derivatives = self.ptweak(xs)
-            print("use_method ptweak is not None")
+        if self.ptweak is not None:
+            derivatives = self.ptweak(xs)
 
         nx = params_dim[0]
         #print(f"nx {nx}")
@@ -378,34 +409,51 @@ class CubeModel:
 # un tuple fonction a minimiser + gradient de cette fonction
 # x cube carte parametre nx,ny,np
     # x is params ?
-    def eval(self, x, noscale=None, returnmaps=None):
-        """
-        /* DOCUMENT cubefit.eval method
-                criterion = fitobj(eval, x, gx)
-                or maps = fitobj(eval, x, noscale=1, returnmaps=1)
+    def eval(self, x, noscale=False, returnmaps=None):
+        """Evaluates fitting criterion and its gradient
 
-        Like for the VIEW method, NOSCALE should almost always be set to 1
-        when calling this method manually.
+        Parameters
+        ----------
+        x : array_like
+            3D array of parameters
+        noscale : bool, optional
+            Whether to scale parameters according to poffset and
+            pscale. Always False during a fit, but should generally be
+            set to True when calling the method manually. Note that
+            noscale only affects how x is evaluatedinterpreted: the
+            computation of the gradient still takes pscale and poffset
+            into account. This way the user can get the value of the
+            gradient that is seen by the fitting routine. If in doubt,
+            rescale x using self.normalize_parameters and set noscale
+            to False.
+        returnmaps: bool, UNIMPLEMENTED
+            If returnmaps is True, returns a stack of maps for each
+            component of the criterion (chi2 term last) instead of the
+            integral. For debugging purposes.
 
-        Criterion is the sum of a weighted chi2 and a regularisation term.
-        To remove regularisation altogether, set regularisation to nil.
+        Returns
+        -------
+        res : float
+            The value of the criterion, the sum of a weighted chi2 and
+            a regularisation term..
+        grad : array_like
+            The gradient of the criterion.
 
-        If RETURNMAPS is one, returns a stack of maps for each component of
-        the criterion (chi2 term last) instead of the integral. pour debugger
+        Raises
+        ------
+        ValueError
+            If self.data is not set or if ptweak derivatives have
+            wrong shape.
+
+        Notes
+        -----
+        To remove regularisation altogether, set self.regularisation
+        to None.
 
         Side effect: if data is not known but weight is None, set
         weight to a cube of ones.
 
-        SEE ALSO: cubefit, cubefit.l1l2, cubefit.markov,
-                cubefit.model, cubefit.fit
-        */
-
         """
-        # beware: "model" below is a local variable, not the method.
-        # local scale, delta, cube, fcn_x, fcn, weight, regularisation,
-        # pscale, poffset, ptweak, decorrelate
-        # restore, use, scale, delta, cube, fcn_x, fcn, weight, regularisation,
-        # pscale, poffset, ptweak, decorrelate
         if self.dbg:
             print("DBG CALL eval func with x")
             print(f"{x}")
@@ -436,19 +484,21 @@ class CubeModel:
 
         xs = self.denormalize_parameters(x)
 
-        derivatives = None
-
         if self.dbg:
             print(f"shape xs {xs.shape}")
 
         if (self.ptweak is not None):
-            # TODO use_method, ptweak, xs, derivatives
-            xs, derivatives = self.ptweak(xs)
-            print(f"use_method")
-
-        if ((derivatives is not None) and (derivatives.shape != xs.shape)):
-            raise Exception("ptweak derivatives should be []\
-                            or same size as parameter array")
+            derivatives = self.ptweak(xs)
+            if (derivatives is not None
+                and (derivatives.size != xs.size
+                     or (np.asarray(derivatives.shape) != xs.shape).any())):
+                raise ValueError("ptweak derivatives should be None "
+                                 "or same size as parameter array")
+            if self.dbg:
+                print("DBG xs after ptweak:") 
+                print(xs)
+        else:
+            derivatives = None
 
         # if (returnmaps):
         if (self.dbg):
@@ -482,7 +532,7 @@ class CubeModel:
                             grad[k,:] *= self.pscale
 
                     if (derivatives is not None):
-                        grad *= derivatives[i, j, :, ]
+                        grad *= derivatives[i, j, np.newaxis, :]
 
                     #print(f"model shape {model.shape}")
                     #print(f"spectrum shape {spectrum.shape}")

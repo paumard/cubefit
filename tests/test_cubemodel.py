@@ -71,7 +71,7 @@ def add_noise(cube, sigma=0.02):
 class TestCubemodel(unittest.TestCase):
     '''UnitTest class to test gauss function
     '''
-    def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None, diflim=None):
+    def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None, diflim=None, **kwargs):
         if diflim is None:
             diflim=np.min(epsilon);
         if diftol is None:
@@ -80,15 +80,15 @@ class TestCubemodel(unittest.TestCase):
         if np.isscalar(epsilon):
             epsilon=np.ones(d[2])*epsilon
         g = np.zeros(d)
-        f0, g0 = f(x)
+        f0, g0 = f(x, **kwargs)
         for k in range(d[2]):
             for j in range(d[1]):
                 for i in range(d[0]):
                     temp = np.copy(x)
                     temp[i, j, k] += 0.5*epsilon[k]
-                    fp, gp=f(temp)
+                    fp, gp=f(temp, **kwargs)
                     temp[i, j, k] -= epsilon[k]
-                    fm, gm=f(temp)
+                    fm, gm=f(temp, **kwargs)
                     # this is (f(x+h/2)-f(x-h/2))/h
                     g[i, j, k] = (fp-fm)/epsilon[k]
         absval=0.5*np.abs(g+g0)
@@ -317,8 +317,8 @@ class TestCubemodel(unittest.TestCase):
         # raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
 
-    def test_cubemodel_pscale_poffset(self):
-        '''Check that CubeFit.eval() and model() takes pscalea and poffset
+    def test_cubemodel_pscale_poffset_ptweak(self):
+        '''Check that CubeFit.eval() and model() use pscale, poffset and ptweak
         '''
         nx, ny, nz = 5, 5, 101
 
@@ -369,7 +369,38 @@ class TestCubemodel(unittest.TestCase):
         self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
         self.assertEqual((np.max(np.abs(model.data-model.model(xreal_normed, noscale=False)))), 0)
 
+        # Create a non-trivial ptweak function
+        def ptweak(params):
+            derivs=np.zeros(params.shape)
+            params[:, : ,0] += 1.
+            derivs[:, :, 0] = 1.
+            derivs[:, :, 1] = 1.
+            params[:, :, 2] *= 1.05
+            derivs[:, :, 2] = 1.05
+            return derivs
 
+        model.ptweak=ptweak
+
+        # Modify input accordingly
+        xintrinsic=xtest.copy()
+        xintrinsic[:, :, 0] -= 1
+        xintrinsic[:, :, 2] /= 1.05
+
+        xx=xintrinsic.copy()
+        derivs = ptweak(xx)
+        self.assertAlmostEqual(np.max(np.abs(xx-xtest)), 0, msg="Something's wrong with ptweak")
+
+        xintrinsic_normed=model.normalize_parameters(xintrinsic)
+        self.check_gradient(model.eval, xintrinsic_normed)
+
+        model.poffset=None
+        model.pscale=None
+        self.check_gradient(model.eval, xintrinsic, noscale=True, epsilon=[1e-6, 1e-12, 1e-12])
+
+        xintrinsic=xreal.copy()
+        xintrinsic[:, :, 0] -= 1
+        xintrinsic[:, :, 2] /= 1.05
+        self.assertAlmostEqual((np.max(np.abs(model.data-model.model(xintrinsic, noscale=True)))), 0)
 
 if __name__ == '__main__':
    unittest.main()
