@@ -210,7 +210,7 @@ class DopplerLines():
             # print(f"k ---------{k}")
             # print(f"aa {aa}")
             # print(f"params[0] {params[0]}")
-            if params[0].size > 1:
+            if np.size(params[0]) > 1:
                 aa[0] = params[0][k]
             else:
                 aa[0] = params[k]
