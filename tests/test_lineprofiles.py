@@ -1,5 +1,10 @@
+import os
 from .common import *
 from cubefit.lineprofiles import gauss, ngauss, WrapToCurveFit
+
+DEBUG=os.environ.get("TEST_LINEPROFILES_DEBUG")
+if DEBUG:
+    from matplotlib import pyplot as plt
 
 class TestGauss(Test1DModel):
     '''UnitTest class to test gauss function

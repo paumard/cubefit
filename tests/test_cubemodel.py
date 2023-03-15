@@ -1,8 +1,13 @@
 import sys
+import os
 from .common import *
 from cubefit.dopplerlines import DopplerLines
 from cubefit.cubemodel import CubeModel
 from cubefit.lineprofiles import gauss, ngauss
+
+DEBUG=os.environ.get("TEST_CUBEMODEL_DEBUG")
+if DEBUG:
+    from matplotlib import pyplot as plt
 
 def write_fits(cube, cname):
     fit_hdu = fits.PrimaryHDU(np.transpose(cube,[2,0,1]))
@@ -242,7 +247,7 @@ class TestCubemodel(unittest.TestCase):
         # return chi2 and fit results
         return (chi2, fitres)
 
-    def test_cubemodel_fit_gauss(self, dbg=False):
+    def test_cubemodel_fit_gauss(self):
         '''Check that CubeModel.fit succeeds (flavor: gauss)
         '''
         # Shape of data cube (nx, ny, nz)
@@ -263,7 +268,7 @@ class TestCubemodel(unittest.TestCase):
         # For instance: raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
 
-    def test_cubemodel_fit_dopplerlines(self, dbg=False):
+    def test_cubemodel_fit_dopplerlines(self):
         '''Check that CubeModel.fit succeeds (flavor: dopplerlines)
         '''
         # Shape of data cube (nx, ny, nz)
@@ -290,7 +295,7 @@ class TestCubemodel(unittest.TestCase):
         # raise error is chi2 not close to 1
         self.assertAlmostEqual(chi2, 1, places=1)
 
-    def test_cubemodel_fit_dopplerlines2(self, dbg=False):
+    def test_cubemodel_fit_dopplerlines2(self):
         '''Check that CubeModel.fit succeeds (flavor: dopplerlines2)
         '''
         # Shape of data cube (nx, ny, nz)

@@ -1,7 +1,12 @@
+import os
 from scipy import optimize
 from .common import *
 from cubefit.dopplerlines import DopplerLines
 from cubefit.lineprofiles import ngauss
+
+DEBUG=os.environ.get("TEST_DOPPLERLINES_DEBUG")
+if DEBUG:
+    from matplotlib import pyplot as plt
 
 class TestDopplerlines(Test1DModel):
     '''UnitTest class to test gauss function
@@ -20,7 +25,7 @@ class TestDopplerlines(Test1DModel):
         xreal_1d = np.array([1.2, 0.5, 25., 100])
         self.check_jacobian(lineobj, waxis, *xreal_1d, epsilon=1e-6, reltol=1e-2, diftol=2e-8)
 
-    def test_dopplerlines(self, dbg=False):
+    def test_dopplerlines(self):
         """
         test_dopplerlines
             x = span(2.15, 2.175, 100);
@@ -33,7 +38,7 @@ class TestDopplerlines(Test1DModel):
             model = obj(eval, a);
             plg, color = "red", model, x;
         """
-        if dbg:
+        if DEBUG:
             print("testing dopplerlines module")
 
         # instanciate a random number generator with fixed seed
@@ -43,12 +48,12 @@ class TestDopplerlines(Test1DModel):
         sigma = 20.5
 
         # first test
-        if dbg:
+        if DEBUG:
             print("# first test")
         lines = 2.166120
         waxis = np.linspace(2.15, 2.175, 100)
         dop = DopplerLines(lines)
-        if dbg:
+        if DEBUG:
             print("after init")
         a = np.array([1.2, 25., 100.])
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
@@ -56,7 +61,7 @@ class TestDopplerlines(Test1DModel):
         # print("ok will change")
 
         # print(f"y.shape {y.shape}")
-        if dbg:
+        if DEBUG:
             print(f"---- y {y}")
             print(f"---- y[0] {y[0]}")
         # print(f"*y {y}")
@@ -64,7 +69,7 @@ class TestDopplerlines(Test1DModel):
         # plt.plot(waxis,y)
         # plt.show()
 
-        if dbg:
+        if DEBUG:
             print("=============")
             print("===FIT  1==========")
 
@@ -85,7 +90,7 @@ class TestDopplerlines(Test1DModel):
             self.assertAlmostEqual(factor, 1.)
         self.assertAlmostEqual(chi2, chi22)
 
-        if dbg:
+        if DEBUG:
             print(f"=======chi2")
             print(f"chi2 reduit {chi2}")
             print(f"chi22 reduit {chi22}")
@@ -102,7 +107,7 @@ class TestDopplerlines(Test1DModel):
             # jac = dop.curfit_jac(waxis, *a)
 
         # second test two lines
-        if dbg:
+        if DEBUG:
             print("# second test two lines")
         lines = (2.166120, 2.155)
         waxis = np.linspace(2.15, 2.175, 100)
@@ -111,7 +116,7 @@ class TestDopplerlines(Test1DModel):
         # y=dop(*a) + rng.standard_normal(100) * sigma
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
 
-        if dbg:
+        if DEBUG:
             print("===FIT 2==========")
         a0 = np.array([1., 0.3, 50., 50.])
         resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0, jac=dop.curvefit_jac)
@@ -127,7 +132,7 @@ class TestDopplerlines(Test1DModel):
             self.assertAlmostEqual(factor, 1., places=5)
         self.assertAlmostEqual(chi2, chi22)
 
-        if dbg:
+        if DEBUG:
             print(f"=======chi2")
             print(f"chi2 reduit {chi2}")
             print(f"chi22 reduit {chi22}")
@@ -143,7 +148,7 @@ class TestDopplerlines(Test1DModel):
             plt.legend()
             plt.show()
         # third test two lines and more parameter
-        if dbg:
+        if DEBUG:
             print("# third test two lines and more parameter")
         lines = (2.166120, 2.155)
         waxis = np.linspace(2.15, 2.175, 100)
@@ -151,7 +156,7 @@ class TestDopplerlines(Test1DModel):
         a = np.array([1.2, 0.5, 25., 100., 1.])
         # y=dop(*a) + rng.standard_normal(100) * sigma
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
-        if dbg:
+        if DEBUG:
             print(f"y==={y}")
             print("===FIT 2 + cst==========")
         a0 = np.array([1., 0.4, 50., 50, 1.5])
@@ -169,7 +174,7 @@ class TestDopplerlines(Test1DModel):
             self.assertAlmostEqual(factor, 1., places=5)
         self.assertAlmostEqual(chi2, chi22)
 
-        if dbg:
+        if DEBUG:
             print(f"=======chi2")
             print(f"chi2 reduit {chi2}")
             print(f"chi22 reduit {chi22}")

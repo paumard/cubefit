@@ -36,7 +36,13 @@ Make one file test_xxx.py for each submodule cubefit.xxx.
 Try to write at least one test for each function or method.
 
 The tests should be quiet by default, not output anything on the
-terminal, plot anything or produce files.
+terminal, plot anything or produce files. Any output (graphics or text
+on the console) should be protected by :
+   if DEBUG:
+Debugging output can be enabled by setting (to anything) an
+environment variable, one per test file, for instance
+TEST_CUBEMODEL_DEBUG for test_cubemodel.py.
+
 
 Each test should call the various self.assertXXX() provided by
 unittest to actually check the results.
