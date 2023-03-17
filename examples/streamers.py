@@ -76,7 +76,7 @@ model.data = add_noise(reality, sigma)
 
 # Initial guess for fit. Can be 1D or 3D.
 xtest_1d=[np.max(I), 0., np.std(v)]
-xtest = np.ones((nx, ny, 1)) * xtest_1d
+xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
 
 if DEBUG:
     plt.plot((waxis-w0)/w0*profile.light_speed, reality[6,10, :], label="bright spectrum (true)")

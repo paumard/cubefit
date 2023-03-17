@@ -121,11 +121,8 @@ class TestCubemodel(unittest.TestCase):
         '''
         nx, ny, nz = 5, 5, 433
 
-        xreal_1d = np.array([1.2, 0.5, 25., 100])
-        nterms = len(xreal_1d)
-        xreal = np.zeros((nx, ny, xreal_1d.size))
-        for k in range(nterms):
-            xreal[:, :, k]=xreal_1d[k]
+        xreal_1d = [1.2, 0.5, 25., 100]
+        xreal = np.full((nx, ny, len(xreal_1d)), xreal_1d)
 
         waxis = np.linspace(2.15e-6, 2.175e-6, nz)
 
@@ -135,10 +132,7 @@ class TestCubemodel(unittest.TestCase):
         model.data = cube_real
 
         xtest_1d = np.array([1.0, 0.6, 50., 120])
-        nterms = len(xreal_1d)
-        xtest = np.zeros((nx, ny, xtest_1d.size))
-        for k in range(nterms):
-            xtest[:, :, k]=xtest_1d[k]
+        xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
 
         self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.], diftol=1e-2)
 
@@ -200,25 +194,20 @@ class TestCubemodel(unittest.TestCase):
         if len(np.shape(xreal)) == 1:
             nterms = len(xreal)
             xreal_1d = xreal
-            xreal = np.zeros((nx,ny,nterms))
-            for i in range(nx):
-                for j in range(ny):
-                    xreal[i,j,:] = xreal_1d
+            xreal = np.full((nx, ny, nterms), xreal_1d)
         elif len(np.shape(xreal)) == 3:
             nterms = np.shape(xreal)[2]
             if np.shape(xreal)[0] != nx or np.shape(xreal)[1] != ny:
-                raise ValueError("inconsistency between np.shape(xreal) and shape")
+                raise ValueError("inconsistency between np.shape(xreal) "
+                                 "and shape")
         else:
             raise ValueError("xreal has wrong shape")
 
         # Same for xtest
         if len(np.shape(xtest)) == 1:
             nterms = len(xtest)
-            xtest_1d = xtest
-            xtest = np.zeros((nx,ny,nterms))
-            for i in range(nx):
-                for j in range(ny):
-                    xtest[i,j,:] = xtest_1d
+            xtest_1d = np.asarray(xtest)
+            xtest = np.full((nx, ny, nterms), xtest_1d)
         elif len(np.shape(xtest)) == 3:
             nterms = np.shape(xtest)[2]
             if np.shape(xtest)[0] != nx or np.shape(xtest)[1] != ny:
@@ -329,12 +318,8 @@ class TestCubemodel(unittest.TestCase):
 
         xreal_1d = np.array([1.2, 2.1701e-6, 1.9e-10])
         xtest_1d = np.array([1.1, 2.1703e-6, 2.5e-10])
-        nterms = len(xreal_1d)
-        xreal = np.zeros((nx, ny, xreal_1d.size))
-        xtest = np.zeros((nx, ny, xreal_1d.size))
-        for k in range(nterms):
-            xreal[:, :, k]=xreal_1d[k]
-            xtest[:, :, k]=xtest_1d[k]
+        xreal = np.full((nx, ny, len(xreal_1d)), xreal_1d)
+        xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
 
         waxis = np.linspace(2.16e-6, 2.18e-6, nz)
 

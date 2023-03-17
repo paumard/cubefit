@@ -1117,12 +1117,7 @@ def test_gauss():
     #plt.plot(gauss_xdata, y)
     #plt.show()
 
-
-    model_param_gauss = np.zeros((nx,ny,nparms))
-
-    for i in range(nx):
-        for j in range(ny):
-            model_param_gauss[i,j,:] = gauss_param
+    model_param_gauss = np.full((nx, ny, nparms), gauss_param)
 
     print(f" model_param_gauss[4,4,:]{model_param_gauss[4,4,:]}")
 
@@ -1241,13 +1236,8 @@ def test():
     lineobj_doppler(doppler_xdata, *doppler_param)[0] \
         + np.random.standard_normal(nz) * sigma
 
-    model_param_doppler = np.zeros((nx, ny, doppler_param.size))
-
-    # print(f"doppler_param is {doppler_param}")
-
-    # TODO find a more pythonic expression
-    for i in range(doppler_param.size):
-        model_param_doppler[:, :, i] = doppler_param[i]
+    model_param_doppler = np.full((nx, ny, doppler_param.size),
+                                  doppler_param)
 
     # print("creating line obj")
     # lineobj_doppler = DopplerLines(lines=lines, profile=ngauss)
@@ -1372,11 +1362,8 @@ def test_fit():
 
     sigma = 0.2
 
-    model_param_doppler = np.zeros((nx, ny, doppler_param.size))
-
-    # TODO find a more pythonic expression
-    for i in range(doppler_param.size):
-        model_param_doppler[:, :, i] = doppler_param[i]
+    model_param_doppler = np.full((nx, ny, doppler_param.size),
+                                  doppler_param)
 
     # TODO choose return tuple or not
     fcn_doppler = lineobj_doppler.__call__
@@ -1418,12 +1405,8 @@ def test_fit():
 
     doppler_param_test = np.array([1.1, 1., 25., 100])
     #doppler_param_test = np.array([1.2, 0.5, 25., 100])
-    model_param_doppler_test = np.zeros((nx, ny, doppler_param_test.size))
-
-    # TODO find a more pythonic expression
-    for i in range(doppler_param_test.size):
-        model_param_doppler_test[:, :, i] = doppler_param_test[i]
-
+    model_param_doppler_test = np.full((nx, ny, doppler_param_test.size),
+                                       doppler_param_test)
 
     # calcul du point de depart x0 les cartes de parametres initiales
     # x0 = cube_noise_doppler
