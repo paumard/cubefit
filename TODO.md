@@ -1,10 +1,10 @@
-# CubeFit to-do list and developper information
+# CubeFit to-do list and developer information
 
 ## Coding standards
 
 ### Quality assurance
 
-1. Write tests in parallel to developping the code:
+1. Write tests in parallel to developing the code:
    - Put manual testing routines that can serve as examples in
      examples/;
    - Write at least one unit test for each function or method:
@@ -41,7 +41,7 @@ https://numpydoc.readthedocs.io/en/latest/format.html
 ASCII documents in the source are in gitlab-flavored markdown:
 https://docs.gitlab.com/ee/user/markdown.html
 
-For instance the checklists bellow follow this syntax:
+For instance the checklists below follow this syntax:
 1. [x] Completed task
 1. [~] Inapplicable task
 1. [ ] Incomplete task
@@ -66,7 +66,7 @@ For instance the checklists bellow follow this syntax:
       - [ ] Check gradient (compare gradient provided by l1l2 and
             markov with a numerical estimate);
       - [ ] Verify that setting scale and delta does change the
-            result, coherently with expactations, including gradient
+            result, coherently with expectations, including gradient
             estimate;
    1. [ ] Implement and check regularization in CubeModel.eval():
       - [ ] Reactivate lines of code in eval() that add the
@@ -76,16 +76,16 @@ For instance the checklists bellow follow this syntax:
       - [ ] Add lines in the existing test suite to verify that
             setting regularisation to l1l2 or markov does the right
             thing:
-         - [ ] Return value of eval() is larger when regularisation
+        - [ ] Return value of eval() is larger when regularisation
               is not None;
-         - [ ] Gradient is still correctly estimated (compare with
+        - [ ] Gradient is still correctly estimated (compare with
               numerical estimate).
    1. [ ] Check that fitting work!
       - [ ] Expand examples/streamers.py to perform a second fit with
             regularisation activated (try both l1l2 and markov. Try to
-            find a good set of hyperparameters (scale and delta) so
+            find a good set of hyper-parameters (scale and delta) so
             that the velocity map is recovered for the full field
-            without bluring the flux and width maps.
+            without blurring the flux and width maps.
       - [ ] Include tests of CubeModel.fit() with regularisation=l1l2
             and with regularisation=markov in the unit test suite; if
             possible include asserts to check that the result is as
@@ -122,11 +122,11 @@ For instance the checklists bellow follow this syntax:
        parameters in ptweak (e.g. neighboring pixels, or flux
        depending on width etc.); The big part is to transform the
        gradient into a Jacobian matrix.
-1. [ ] Pythonfify moffat.py and merge it into lineprofiles.py:
-       - [ ] Rename 1D profile to simply moffat instead of moffat1d
-       - [ ] Debug and write test suite including gradient;
-       - [ ] Write an example or test where moffat is used as a base
-             profile for DopplerLines.
+1. [ ] Pythonify moffat.py and merge it into lineprofiles.py:
+   - [ ] Rename 1D profile to simply moffat instead of moffat1d
+   - [ ] Debug and write test suite including gradient;
+   - [ ] Write an example or test where moffat is used as a base
+         profile for DopplerLines.
 1. [ ] Verify that all 1D models (from lineprofiles, dopplerlines or
        multiprofile) work with xdata of any shape (scalar,
        n-dimensional array...).
