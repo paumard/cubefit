@@ -1,4 +1,4 @@
-# Sample usage of CubFit
+# Sample usage of CubeFit
 
 Scripts in this directory give examples of how CubeFit can be used.
 
