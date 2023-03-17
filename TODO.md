@@ -76,9 +76,9 @@ For instance the checklists bellow follow this syntax:
       - [ ] Add lines in the existing test suite to verify that
             setting regularisation to l1l2 or markov does the right
             thing:
-	- [ ] Return value of eval() is larger when regularisation is
-              not None;
-        - [ ] Gradient is still correctly estimated (compare with
+         - [ ] Return value of eval() is larger when regularisation
+              is not None;
+         - [ ] Gradient is still correctly estimated (compare with
               numerical estimate).
    1. [ ] Check that fitting work!
       - [ ] Expand examples/streamers.py to perform a second fit with
