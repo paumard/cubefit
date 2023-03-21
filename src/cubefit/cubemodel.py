@@ -127,14 +127,16 @@ class CubeModel:
     ptweak : callable
         A function to add instrumental signature to the parameters,
         with signature
-            pteak(params) -> derivatives
-        Should modify the parameters in place and return the
-        derivatives. At the moment, these modifications of the
-        parameters should not introduce correlations (because only the
-        derivative of each parameter is returned, not a full Jacobian
-        matrix). Possible usage includes adding a per-pixel velocity
-        offset or modify linewidth to mimick convolution by a spectral
-        PSF.
+            ptweak(params) -> params, derivatives
+        Should modify the parameters and return the modified
+        parameters and their derivatives as two arrays of the same
+        shape. The params array may be modified in place. At the
+        moment, these modifications of the parameters should not
+        introduce correlations (because only the derivative of each
+        parameter is returned, not a full Jacobian matrix). Possible
+        usage includes adding a per-pixel velocity offset or modify
+        linewidth to mimick convolution by a spectral PSF.
+
     scale
         UNDOCUMENTED
     delta
@@ -311,7 +313,7 @@ class CubeModel:
             xs = self.denormalize_parameters(params)
 
         if self.ptweak is not None:
-            derivatives = self.ptweak(xs)
+            xs, derivatives = self.ptweak(xs)
 
         nx = params_dim[0]
         #print(f"nx {nx}")
@@ -488,7 +490,7 @@ class CubeModel:
             print(f"shape xs {xs.shape}")
 
         if (self.ptweak is not None):
-            derivatives = self.ptweak(xs)
+            xs, derivatives = self.ptweak(xs)
             if (derivatives is not None
                 and (derivatives.size != xs.size
                      or (np.asarray(derivatives.shape) != xs.shape).any())):
