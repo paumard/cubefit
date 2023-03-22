@@ -361,13 +361,15 @@ class TestCubemodel(unittest.TestCase):
 
         # Create a non-trivial ptweak function
         def ptweak(params):
-            derivs=np.zeros(params.shape)
+            # Derivatives for all unchanged parameters and parameters
+            # changed by a constant amount is 1. So let's initialize
+            # all derivatives to 1.
+            derivs=np.ones(params.shape)
             params[:, : ,0] += 1.
-            derivs[:, :, 0] = 1.
-            derivs[:, :, 1] = 1.
             params[:, :, 2] *= 1.05
+            # Only derivs[:, :, 2] is not 1 in this example.
             derivs[:, :, 2] = 1.05
-            return derivs
+            return params, derivs
 
         model.ptweak=ptweak
 
@@ -376,21 +378,26 @@ class TestCubemodel(unittest.TestCase):
         xintrinsic[:, :, 0] -= 1
         xintrinsic[:, :, 2] /= 1.05
 
+        # ptweak may modify xx in place
         xx=xintrinsic.copy()
-        derivs = ptweak(xx)
-        self.assertAlmostEqual(np.max(np.abs(xx-xtest)), 0, msg="Something's wrong with ptweak")
+        xx, derivs = ptweak(xx)
+        self.assertAlmostEqual(np.max(np.abs(xx-xtest)), 0,
+                               msg="Something's wrong with ptweak")
 
         xintrinsic_normed=model.normalize_parameters(xintrinsic)
         self.check_gradient(model.eval, xintrinsic_normed)
 
         model.poffset=None
         model.pscale=None
-        self.check_gradient(model.eval, xintrinsic, noscale=True, epsilon=[1e-6, 1e-12, 1e-12])
+        self.check_gradient(model.eval, xintrinsic, noscale=True,
+                            epsilon=[1e-6, 1e-12, 1e-12])
 
         xintrinsic=xreal.copy()
         xintrinsic[:, :, 0] -= 1
         xintrinsic[:, :, 2] /= 1.05
-        self.assertAlmostEqual((np.max(np.abs(model.data-model.model(xintrinsic, noscale=True)))), 0)
+        self.assertAlmostEqual((np.max(np.abs(model.data
+                                              -model.model(xintrinsic,
+                                                           noscale=True)))), 0)
 
 if __name__ == '__main__':
    unittest.main()
