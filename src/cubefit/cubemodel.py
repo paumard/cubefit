@@ -61,7 +61,7 @@ scratch = save(scratch,
                )
 #fitobj = CubeModel(new, cube = cubl(,,indlines), weight = noise,
 #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
-#                 scale=scale, delta=delta, regularisation=cubefit.l1l2,
+#                 scale=scale, delta=delta, regularization=cubefit.l1l2,
 #                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
 
 """
@@ -71,14 +71,14 @@ class CubeModel:
     """Spectro-imaging data model
 
     The CubeModel class is designed for spectral fitting with spatial
-    regularisation in a spectro-imaging context.
+    regularization in a spectro-imaging context.
 
     The 3D model is based on a 1D model (called profile) and 2D
     parameter maps. The 2D maps are regularised (using by default an
-    L1L2 regularisation).
+    L1L2 regularization).
 
     The estimator is a compound of a chi^2 (based on the 1D model), a
-    regularisation term (based of the 2D regularisation of the various
+    regularization term (based of the 2D regularisation of the various
     2D parameter maps) and an optional decorrelation term (based on
     the crosscorrelation of specific pairs of paramter maps).
 
@@ -101,11 +101,11 @@ class CubeModel:
         whatever profile accepts as its first positional
         argument. Often a wavelength axis, sometimes a complex object,
         possibly None.
-    regularisation: callable, optional
-        The regularisation function to use, by default
+    regularization: callable, optional
+        The regularization function to use, by default
         cubefit.cubemodel.markov. Any function with the same prototype
-        as l1l2 or markov is suitable. Set regularisation to None
-        remove regularisation entirely.
+        as l1l2 or markov is suitable. Set regularization to None
+        remove regularization entirely.
     decorrelate : UNIMPLEMENTED
         pairs of map ID for which the cross-correlation should ba
         minimal together with weight, e.g. decorrelate = [1, 2, 0.4]
@@ -181,10 +181,10 @@ class CubeModel:
     Those functions are in the cubefit object but not copied by NEW
     in the FIOBJ object. They can be called with: cubefit.FUNCTION().
 
-    l1l2:   L1L2 regularisation method. e.g.:
-              fitobj, regularisation=cubefit.l1l2
-    markov: Markov regularisation method. e.g.:
-              fitobj, regularisation=cubefit.markov
+    l1l2:   L1L2 regularization method. e.g.:
+              fitobj, regularization=cubefit.l1l2
+    markov: Markov regularization method. e.g.:
+              fitobj, regularization=cubefit.markov
 
     SYNOPSIS
     fitobj = CubeModel(new, [members=members])
@@ -196,20 +196,20 @@ class CubeModel:
     */
 
     """
-    # TODO important apres premiere phase , regularisation et ptweak
+    # TODO important apres premiere phase , regularization et ptweak
     #
     # def __init__(self,cube,weight,fcn=None,fcn_x=None, \
-    #            regularisation=None,decorrelate=None, \
+    #            regularization=None,decorrelate=None, \
     #            scale=None, delta=None, pscale=None, \
     #            poffset=None, ptweak=None):
     def __init__(self, data=None, profile=None, profile_xdata=None, weight=None,
                  scale=None, delta=None, pscale=None, poffset=None,
-                 ptweak=None, regularisation=None, decorrelate=None):
-        if (regularisation is not None):
-            self.regularisation = regularisation
+                 ptweak=None, regularization=None, decorrelate=None):
+        if (regularization is not None):
+            self.regularization = regularization
         else:
-            self.regularisation = markov
-            # TODO regularisation should default to markov
+            self.regularization = markov
+            # TODO regularization should default to markov
 
         # function/methods should be the dopplerlin eval func
         self.profile = profile
@@ -435,7 +435,7 @@ class CubeModel:
         -------
         res : float
             The value of the criterion, the sum of a weighted chi2 and
-            a regularisation term..
+            a regularization term..
         grad : array_like
             The gradient of the criterion.
 
@@ -447,7 +447,7 @@ class CubeModel:
 
         Notes
         -----
-        To remove regularisation altogether, set self.regularisation
+        To remove regularization altogether, set self.regularisation
         to None.
 
         Side effect: if data is not known but weight is None, set
@@ -495,7 +495,7 @@ class CubeModel:
                 raise ValueError("ptweak derivatives should be None "
                                  "or same size as parameter array")
             if self.dbg:
-                print("DBG xs after ptweak:") 
+                print("DBG xs after ptweak:")
                 print(xs)
         else:
             derivatives = None
@@ -534,11 +534,6 @@ class CubeModel:
                     if (derivatives is not None):
                         grad *= derivatives[i, j, np.newaxis, :]
 
-                    #print(f"model shape {model.shape}")
-                    #print(f"spectrum shape {spectrum.shape}")
-                    # print(f"atom shape {atom.shape}")
-                    #print(f"weight shape {self.weight.shape}")
-
                     atom = (model - spectrum) * self.weight[i, j,: ]
                     # //        tot+=atom
 
@@ -549,65 +544,71 @@ class CubeModel:
                     #    maps[i, j, 0] = sum(atom**2)
 
                     res += sum(atom**2)
-                    # TODO sum
-                    #print(f"grad shape {grad.shape}")
-                    #print(f"atom shape {atom.shape}")
-                    #print(f"weight shape {self.weight.shape}")
                     # yorick line gx(i,j,) += (grad * atom(,-))(sum,) *2.;
                     gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ]), axis=0) * 2.
         # //  window,34
         # //  plg, tot
-        # TODO implemente regularisation
+        # TODO implemente regularization
         if self.dbg:
-            print(f" not callable regularisation {not callable(self.regularisation)}")
-        # if (!is_func(regularisation)) goto out
-        #if (not callable(self.regularisation)):
-            # if (self.regularisation is not None):
-            print("goto out")
-            # return None
-        return res, gx
+            print(f" not callable regularization {not callable(self.regularisation)}")
+        # if (!is_func(regularization)) goto out
+        #if (not callable(self.regularization)):
+            # if (self.regularization is not None):
+        print("DBG start regularization")
 
+        # TODO xbig = np.zeros((d[0]*2 -1, d[1]*2 -1, d[2])) ?
         # creation d une carte plus grande pour eviter effet de bord des bords
         xbig = np.zeros((d[0]*2, d[1]*2, d[2]))
+        # bas gauche
         xbig[:d[0], :d[1], :] = x
-        # on groupe par trois
-        print(f"shape x[:,0:1:-1,:] {x[:,0:1:-1,:].shape}")
-        print(f"shape y=np.flip(x,1) {np.flip(x,1).shape}")
-        # xbig[:d[0], d[1]+1:,:] = x[:,0:1:-1,:]
 
-        # TODO d[1]+1 ou pas?
+        # haut gauche
+        # v1 garde des zeros
+        # print(f"shape x[:,-1:0:-1,:] {x[:,-1:0:-1,:].shape}")
+        # xbig[:d[0], d[1]+1:,:] = x[:,-1:0:-1,:]
+
+        # V2 double la ligne
+        # TODO d[1]+1 ou pas ?
+        # print(f"shape y=np.flip(x,1) {np.flip(x,1).shape}")
         # print(f"xbig[:d[0], d[1]+1:,:].shape {xbig[:d[0], d[1]+1:,:].shape}")
         xbig[:d[0], d[1]:, :] = np.flip(x, 1)
-        xbig[d[0]+1:, :, :] = xbig[d[0]:1:-1, :, :]
+
+        #recopie bas haut gauche vers bas haut droite
+        # TODO d[0]+1 ou pas?
+        xbig[d[0]:, :, :] = xbig[d[0]:0:-1, :, :]
         # g is a grad
         g = np.empty(xbig.shape)
         # TODO for debug only
         for k in range(d[2]):
             # TypeError: unsupported operand type(s) for /: 'tuple' and 'float'
-            #tmp = self.regularisation(xbig[:, :, k], g,scale=self.scale[k], delta=self.delta[k],returnmap=returnmaps) / 4.
+            #tmp = self.regularization(xbig[:, :, k], g,scale=self.scale[k], delta=self.delta[k],returnmap=returnmaps) / 4.
             if (not self.dbg):
-                tmp = self.regularisation(xbig[:, :, k], g,self.scale[k], self.delta[k]) / 4.
+                tmp = self.regularization(xbig[:, :, k], g,
+                                          self.scale[k], self.delta[k])[0] / 4.
             else:
                 if self.dbg:
                     print("dbgla")
-                tmp = self.regularisation(xbig[:, :, k], g,self.scale[k], self.delta[k],returnmaps) / 4.
+                tmp = self.regularization(xbig[:, :, k], g,self.scale[k], self.delta[k],returnmaps) / 4.
             # TODO change
             if (self.dbg):
                 self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
-
+            print(f"g after regul {g}")
+            print(f"g is a {g.shape}")
             # if (returnmaps):
             #    maps[:,:,k] =  tmp[:d[0], :d[1]]
-            #tmp=0
+            # tmp=0
             res += tmp
             # TODO indices commence a 0 ?
-            gx[:, :, k] += g[0:d[0]:+1, 1:d[1]:+1]
-                       # Compared to Yorick version :
-                       # TODO modify yorick version if needed to compare
-                       # no need to add the 4 quadrants since
-                       # we divide by 4 above +\
-                       #g[0:d[0]:+1, -1:d[1]+1:-1] +\
-                       #g[-1:d[0]+1:-1, 1:d[1]:+1] +\
-                       #g[-1:d[0]+1:-1, -1:d[1]+1:-1]
+            print(f"d[0] {d[0]} d[1] {d[1]} ")
+            #gx[:, :, k] += g
+            gx[:, :, k] += g[0:d[0]:+1, 0:d[1]:+1]
+            # Compared to Yorick version :
+            # TODO modify yorick version if needed to compare
+            # no need to add the 4 quadrants since
+            # we divide by 4 above +\
+            # g[0:d[0]:+1, -1:d[1]+1:-1] +\
+            # g[-1:d[0]+1:-1, 1:d[1]:+1] +\
+            # g[-1:d[0]+1:-1, -1:d[1]+1:-1]
 
         # if (returnmaps):
         #    return maps
@@ -635,7 +636,7 @@ class CubeModel:
                     pow = 2
                 xy = x[:, :, [i1, i2]]
                 # TODO
-                correl = cubefit.corr(xy, grad, deriv=1)
+                correl = CubeModel.corr(xy, grad, deriv=1)
                 res += w * correl**pow
                 gx[:, :, [i1, i2]] += w*pow*correl**(pow-1)*grad
 
@@ -691,8 +692,8 @@ class CubeModel:
         #  print(f"{iter}  {eval} {cpu} {fx} {gnorm} {step}")
 
         for k in range(d.shape[3]):
-            # write, output, format="%-9.1e", regularisation(x(,,k), g,
-            print(f'{self.regularisation(x[:,:,k], scale=self.scale[k],delta=self.delta[k])}')
+            # write, output, format="%-9.1e", regularization(x(,,k), g,
+            print(f'{self.regularization(x[:,:,k], scale=self.scale[k],delta=self.delta[k])}')
 
         for pair in range(npairs):
             i1 = np.floor(self.decorrelate(1, pair))
@@ -703,7 +704,7 @@ class CubeModel:
             else:
                 pow = 2
             xy = x[:, :, [i1, i2]]
-            correl = cubefit.corr(xy)
+            correl = CubeModel.corr(xy)
             # write, output, format="%-10.1e", w * correl**pow
             print(f"{w*correl**pow}")
 
@@ -919,12 +920,11 @@ class CubeModel:
         # extra,view, x
         print("TODO op_viewer")
 
-def noreg(x, *grad_obj,
-                 scale=None, delta=None, returnmap=None):
-    return x
+def noreg(x, grad_obj, scale=None, delta=None):
+    return 0,grad_obj
 
-def markov(x, *grad_obj,
-                   scale=None, delta=None, returnmap=None):
+
+def markov(x, grad_obj, scale=None, delta=None):
     """
     DOCUMENT cubefit.markov(object,grad_object[,scale=,delta=])
 
@@ -959,8 +959,9 @@ def markov(x, *grad_obj,
     amap = np.abs(dx) - np.log(1. + np.abs(dx)) + \
         np.abs(dy) - np.log(1. + np.abs(dy))
 
-    if (returnmap):
-        return (delta**2) * amap
+    # TODO integrate returnmap with self.dbg
+    # if (returnmap):
+    #    return (delta**2) * amap
 
     crit = (delta**2) * np.sum(amap)
 
@@ -970,6 +971,11 @@ def markov(x, *grad_obj,
     # roll
     grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
                (delta / scale)
+
+    print (f"crit {crit}")
+    print (f"crit.shape {crit.shape}")
+    print (f"grad_obj {grad_obj}")
+    print (f"grad_obj.shape {grad_obj.shape}")
 
     return crit, grad_obj
 
@@ -1188,7 +1194,7 @@ def test():
     EXAMPLE
     #fitobj = cubefit(new, cube = cubl(,,indlines), weight = noise,
     #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
-    #                 scale=scale, delta=delta, regularisation=cubefit.l1l2,
+    #                 scale=scale, delta=delta, regularization=cubefit.l1l2,
     #                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
         'cube', 'weight', 'fcn', 'fcn_x',
         'scale', 'delta', 'pscale', 'poffset', and 'ptweak'
@@ -1258,7 +1264,7 @@ def test():
 
     # test more parameters
     # fitobj=cubefit(cube,cube_noise,fcn,fcn_x,scale, delta,
-    #            pscale,poffset, ptweak,regularisation=None,decorrelate=None)
+    #            pscale,poffset, ptweak,regularization=None,decorrelate=None)
 
     # model
     # cube_model=fitobj.model(cube,a0)
@@ -1372,7 +1378,7 @@ def test_fit():
     print("creating fit obj")
     # create fit obj
     fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
-                                   fcn_x_doppler, weight)
+                                     fcn_x_doppler, weight)
     # model
     print("compute model ...")
     cube_model_doppler = fitobj_doppler_model.model(model_param_doppler)
