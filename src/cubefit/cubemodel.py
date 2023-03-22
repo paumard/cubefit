@@ -577,7 +577,7 @@ class CubeModel:
         # TODO d[0]+1 ou pas?
         xbig[d[0]:, :, :] = xbig[d[0]:0:-1, :, :]
         # g is a grad
-        g = np.empty(xbig.shape)
+        g = np.empty(xbig.shape[:-1])
         # TODO for debug only
         for k in range(d[2]):
             # TypeError: unsupported operand type(s) for /: 'tuple' and 'float'
