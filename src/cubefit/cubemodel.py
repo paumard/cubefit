@@ -548,13 +548,15 @@ class CubeModel:
                     gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ]), axis=0) * 2.
         # //  window,34
         # //  plg, tot
+
+        # TODO optimize xbig for regularization
         # TODO implemente regularization
         if self.dbg:
             print(f" not callable regularization {not callable(self.regularisation)}")
         # if (!is_func(regularization)) goto out
         #if (not callable(self.regularization)):
             # if (self.regularization is not None):
-        print("DBG start regularization")
+        # print("DBG start regularization")
 
         # TODO xbig = np.zeros((d[0]*2 -1, d[1]*2 -1, d[2])) ?
         # creation d une carte plus grande pour eviter effet de bord des bords
@@ -577,29 +579,28 @@ class CubeModel:
         # TODO d[0]+1 ou pas?
         xbig[d[0]:, :, :] = xbig[d[0]:0:-1, :, :]
         # g is a grad
-        g = np.empty(xbig.shape[:-1])
+        #g = np.empty(xbig.shape[:-1])
         # TODO for debug only
         for k in range(d[2]):
-            # TypeError: unsupported operand type(s) for /: 'tuple' and 'float'
-            #tmp = self.regularization(xbig[:, :, k], g,scale=self.scale[k], delta=self.delta[k],returnmap=returnmaps) / 4.
-            if (not self.dbg):
-                tmp = self.regularization(xbig[:, :, k], g,
-                                          self.scale[k], self.delta[k])[0] / 4.
+            # TODO pass dict to regularization function
+            if self.scale[k] is not None and self.delta[k] is not None:
+                tmp, g = self.regularization(xbig[:, :, k],
+                                         self.scale[k], self.delta[k])
             else:
-                if self.dbg:
-                    print("dbgla")
-                tmp = self.regularization(xbig[:, :, k], g,self.scale[k], self.delta[k],returnmaps) / 4.
+                tmp, g = self.regularization(xbig[:, :, k])
+            tmp = tmp / 4.
+
             # TODO change
             if (self.dbg):
                 self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
-            print(f"g after regul {g}")
-            print(f"g is a {g.shape}")
+                print(f"g after regul {g}")
+                print(f"g is a {g.shape}")
             # if (returnmaps):
             #    maps[:,:,k] =  tmp[:d[0], :d[1]]
             # tmp=0
             res += tmp
             # TODO indices commence a 0 ?
-            print(f"d[0] {d[0]} d[1] {d[1]} ")
+            # print(f"d[0] {d[0]} d[1] {d[1]} ")
             #gx[:, :, k] += g
             gx[:, :, k] += g[0:d[0]:+1, 0:d[1]:+1]
             # Compared to Yorick version :
@@ -920,11 +921,9 @@ class CubeModel:
         # extra,view, x
         print("TODO op_viewer")
 
-def noreg(x, grad_obj, scale=None, delta=None):
-    return 0,grad_obj
 
-
-def markov(x, grad_obj, scale=None, delta=None):
+# TODO return tuple virer grad_obj
+def markov(x, scale=None, delta=None):
     """
     DOCUMENT cubefit.markov(object,grad_object[,scale=,delta=])
 
@@ -968,20 +967,20 @@ def markov(x, grad_obj, scale=None, delta=None):
     dx /= (1. + abs(dx))
     dy /= (1. + abs(dy))
 
+    # TODO reimplement the true gradient
     # roll
     grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
                (delta / scale)
 
-    print (f"crit {crit}")
-    print (f"crit.shape {crit.shape}")
-    print (f"grad_obj {grad_obj}")
-    print (f"grad_obj.shape {grad_obj.shape}")
+    # print (f"crit {crit}")
+    # print (f"crit.shape {crit.shape}")
+    # print (f"grad_obj {grad_obj}")
+    # print (f"grad_obj.shape {grad_obj.shape}")
 
     return crit, grad_obj
 
 # voir si fonction de module plutot que de class satic
-def l1l2(x, *grad_obj,
-                 scale=None, delta=None, returnmap=None):
+def l1l2(x, scale=None, delta=None):
     """
     DOCUMENT cubefit.l1l2(object,grad_object[,scale=,delta=])
     delta^2 . sum [|dx|/delta -ln(1+|dx|/delta)+ |dy|/delta -ln(1+|dy|/delta)]
@@ -1015,14 +1014,15 @@ def l1l2(x, *grad_obj,
     # map is a reserved python keyword
     amap = r - np.log(1.+r)
 
-    if (returnmap):
-        return (delta**2) * amap
+    #if (returnmap):
+    #    return (delta**2) * amap
 
     crit = (delta**2) * np.sum(amap)
 
     dx /= (1. + r)
     dy /= (1. + r)
 
+    # TODO reimplement the true gradient
     # TODO dx-roll is that ok (x - roll) en place de object-roll
     # ou est ce object - roll ?
     grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \

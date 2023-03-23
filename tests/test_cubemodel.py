@@ -1,17 +1,18 @@
-import sys
+# import sys
 import os
 from .common import *
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel
+from cubefit.cubemodel import CubeModel , markov
 from cubefit.lineprofiles import gauss, ngauss
 
-DEBUG=os.environ.get("TEST_CUBEMODEL_DEBUG")
+DEBUG = os.environ.get("TEST_CUBEMODEL_DEBUG")
 if DEBUG:
     from matplotlib import pyplot as plt
 
+
 def write_fits(cube, cname):
-    fit_hdu = fits.PrimaryHDU(np.transpose(cube,[2,0,1]))
-    #fit_hdu = fits.PrimaryHDU(cube)
+    fit_hdu = fits.PrimaryHDU(np.transpose(cube, [2, 0, 1]))
+    # fit_hdu = fits.PrimaryHDU(cube)
     fit_hdul = fits.HDUList([fit_hdu])
     fit_hdul.writeto(cname, overwrite=True)
 
@@ -242,7 +243,7 @@ class TestCubemodel(unittest.TestCase):
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = (5, 5, 433)
         # Model we want to test
-        model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz), regularisation=None)
+        model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz), regularization=None)
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d = (1,1, 0.5, 0.5,0.1)
         # Initial guess for fit. Can be 1D or 3D.
@@ -266,7 +267,7 @@ class TestCubemodel(unittest.TestCase):
         # Model we want to test
         profile = DopplerLines(2.166120, profile=ngauss)
         profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata, regularisation=False)
+        model = CubeModel(profile=profile, profile_xdata=profile_xdata, regularization=None)
 
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d=(1.2, 0.5, 25., 100)
@@ -293,7 +294,7 @@ class TestCubemodel(unittest.TestCase):
         # Model we want to test
         profile = DopplerLines(2.166120, profile=ngauss)
         profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata, regularisation=False)
+        model = CubeModel(profile=profile, profile_xdata=profile_xdata, regularization=None)
 
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d=(1.2, 0.5, 25., 100)
@@ -330,7 +331,7 @@ class TestCubemodel(unittest.TestCase):
         xtest_normed=(xtest-poffset[np.newaxis, np.newaxis, :])/pscale[np.newaxis, np.newaxis, :]
 
         profile = gauss
-        model = CubeModel(profile=profile, profile_xdata=waxis, regularisation=False)
+        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
         model.data = model.model(xreal)
         val = model.criterion(xtest)
 
@@ -399,5 +400,40 @@ class TestCubemodel(unittest.TestCase):
                                               -model.model(xintrinsic,
                                                            noscale=True)))), 0)
 
+    def test_cubemodel_regularization(self):
+        '''Check that CubeModel.regularization succeeds
+        (flavor: noreg, markov, l1l2)
+        '''
+        print(f"  Temporary debug of test regularization")
+        nx = ny = 10
+        # test for uniform image
+        # create a uniform image (2D array)
+        img_uniform = np.full((nx,ny),50)
+        crit, grad = markov(img_uniform)
+        print(f"crit uni {crit}")
+        print(f"grad {grad}")
+        # adding a constant should not change result
+        img_uniform += 50
+        crit, grad = markov(img_uniform)
+        print(f"crit uni const {crit}")
+        print(f"grad {grad}")
+        # test for spiked image
+        img_spike = np.full((nx,ny),50)
+        img_spike[4:6,4:6] = 100
+        crit, grad = markov(img_spike)
+        print(f"crit spike {crit}")
+        print(f"grad {grad}")
+        # test for random image
+        img_rand = np.random.normal(0, 1, (nx,ny))
+        crit, grad = markov(img_rand)
+        print(f"crit rand {crit}")
+        print(f"grad {grad}")
+        img_bicolor = np.zeros((nx,ny))
+        img_bicolor[5:9] = 1
+        crit, grad = markov(img_bicolor)
+        print(f"crit bicol {crit}")
+        print(f"grad {grad}")
+
+
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()
