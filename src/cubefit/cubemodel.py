@@ -583,7 +583,7 @@ class CubeModel:
         # TODO for debug only
         for k in range(d[2]):
             # TODO pass dict to regularization function
-            if self.scale[k] is not None and self.delta[k] is not None:
+            if self.scale is not None and self.delta is not None:
                 tmp, g = self.regularization(xbig[:, :, k],
                                          self.scale[k], self.delta[k])
             else:

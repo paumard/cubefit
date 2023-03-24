@@ -77,11 +77,12 @@ def add_noise(cube, sigma=0.02):
 class TestCubemodel(unittest.TestCase):
     '''UnitTest class to test gauss function
     '''
-    def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None, diflim=None, **kwargs):
+    def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None,
+                       diflim=None, **kwargs):
         if diflim is None:
-            diflim=np.min(epsilon);
+            diflim = np.min(epsilon)
         if diftol is None:
-            diftol=diflim*reltol;
+            diftol = diflim*reltol
         d = x.shape
         if np.isscalar(epsilon):
             epsilon=np.ones(d[2])*epsilon
@@ -97,13 +98,13 @@ class TestCubemodel(unittest.TestCase):
                     fm, gm=f(temp, **kwargs)
                     # this is (f(x+h/2)-f(x-h/2))/h
                     g[i, j, k] = (fp-fm)/epsilon[k]
-        absval=0.5*np.abs(g+g0)
-        difval=np.abs(g-g0)
-        cond=absval>diflim
+        absval = 0.5*np.abs(g+g0)
+        difval = np.abs(g-g0)
+        cond = absval>diflim
         if np.any(cond):
-            maxrel=np.max(difval[cond]/absval[cond])
+            maxrel = np.max(difval[cond]/absval[cond])
             self.assertTrue(maxrel < reltol, f"Gradient is not within relative tolerance (max: {maxrel}, reltol: {reltol}, diflim: {diflim})")
-        cond=absval<=diflim
+        cond = absval<=diflim
         if np.any(cond):
             maxdif=np.max(difval[cond])
             self.assertTrue(maxdif < diftol, f"Gradient is not within absolute tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
@@ -135,7 +136,8 @@ class TestCubemodel(unittest.TestCase):
         xtest_1d = np.array([1.0, 0.6, 50., 120])
         xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
 
-        self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.], diftol=1e-2)
+        self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.],
+                            diftol=1e-2)
 
     def helper_cubemodel_fit(self, model, shape, xreal, xtest, sigma, **fit_kwargs):
         """Helper for CubeModel.fit tests
@@ -404,35 +406,58 @@ class TestCubemodel(unittest.TestCase):
         '''Check that CubeModel.regularization succeeds
         (flavor: noreg, markov, l1l2)
         '''
-        print(f"  Temporary debug of test regularization")
+        # print(f"  Temporary debug of test regularization")
         nx = ny = 10
+
         # test for uniform image
         # create a uniform image (2D array)
         img_uniform = np.full((nx,ny),50)
-        crit, grad = markov(img_uniform)
-        print(f"crit uni {crit}")
-        print(f"grad {grad}")
+        crit, _ = markov(img_uniform)
+        # print(f"crit uni {crit}")
+        # print(f"grad {grad}")
+        self.assertEqual(crit, 0,
+                         "markov regularization criterion \
+                         for a uniform image should be 0")
+
         # adding a constant should not change result
         img_uniform += 50
-        crit, grad = markov(img_uniform)
-        print(f"crit uni const {crit}")
-        print(f"grad {grad}")
+        crit_const, _ = markov(img_uniform)
+        # print(f"crit uni const {crit_const}")
+        # print(f"grad {grad}")
+        self.assertEqual(crit_const, crit,
+                         "markov regularization criterion \
+                         for a uniform image should be 0")
         # test for spiked image
         img_spike = np.full((nx,ny),50)
-        img_spike[4:6,4:6] = 100
-        crit, grad = markov(img_spike)
-        print(f"crit spike {crit}")
-        print(f"grad {grad}")
+        img_spike[4:6, 4:6] = 100
+        crit_spike, _ = markov(img_spike)
+        self.assertGreater(crit_spike, 100,
+                           "markov regularization criterion \
+                           for a spike image should be high")
+        #
+        # print(f"crit spike {crit_spike}")
+        # print(f"grad {grad}")
         # test for random image
         img_rand = np.random.normal(0, 1, (nx,ny))
-        crit, grad = markov(img_rand)
-        print(f"crit rand {crit}")
-        print(f"grad {grad}")
-        img_bicolor = np.zeros((nx,ny))
-        img_bicolor[5:9] = 1
-        crit, grad = markov(img_bicolor)
-        print(f"crit bicol {crit}")
-        print(f"grad {grad}")
+        crit_rand, _ = markov(img_rand)
+        self.assertLess(crit_rand, crit_spike,
+                        "markov regularization criterion \
+                        for a random image should be \
+                        less than a spiked one")
+
+        # print(f"crit rand {crit_rand}")
+        # print(f"grad {grad}")
+        img_pattern = np.zeros((nx,ny))
+        img_pattern[5:9] = 1
+        crit_pattern, _ = markov(img_pattern)
+        self.assertLess(crit_pattern, crit_rand,
+                        "markov regularization criterion \
+                        for an image with geometric pattern should be \
+                        less than a for a random one")
+
+
+        # print(f"crit bicol {crit_pattern}")
+        # print(f"grad {grad}")
 
 
 if __name__ == '__main__':
