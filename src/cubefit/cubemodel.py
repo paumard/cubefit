@@ -584,10 +584,13 @@ class CubeModel:
         for k in range(d[2]):
             # TODO pass dict to regularization function
             if self.scale is not None and self.delta is not None:
+                # print("scale delta not None")
                 tmp, g = self.regularization(xbig[:, :, k],
                                          self.scale[k], self.delta[k])
             else:
+                # print("scale delta None")
                 tmp, g = self.regularization(xbig[:, :, k])
+
             tmp = tmp / 4.
 
             # TODO change
@@ -940,6 +943,7 @@ def markov(x, scale=None, delta=None):
     AUTHOR: Damien Gratadour, borrowed from Yoda.
     */
     """
+    # print("DBG inside markov")
     # TODO scale et delta already in self
     if (scale is None):
         scale = 1.
@@ -995,7 +999,7 @@ def l1l2(x, scale=None, delta=None):
 
     AUTHOR: Damien Gratadour, borrowed from Yoda.
     """
-
+    # print("DBG inside l1l2")
     # if (!is_set(scale)) scale = 1.
     # if (!is_set(delta)) delta = 1.
     # TODO scale et delta already in self
@@ -1407,7 +1411,8 @@ def test_fit():
 
     # on recree un obj cubefit
     fitobj_eval_doppler = CubeModel(cube_noise_doppler,
-                                  fcn_doppler, fcn_x_doppler, weight)
+                                    fcn_doppler, fcn_x_doppler, weight,
+                                    regularization=l1l2)
 
     doppler_param_test = np.array([1.1, 1., 25., 100])
     #doppler_param_test = np.array([1.2, 0.5, 25., 100])

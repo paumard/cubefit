@@ -2,7 +2,7 @@
 import os
 from .common import *
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel , markov
+from cubefit.cubemodel import CubeModel , markov, l1l2
 from cubefit.lineprofiles import gauss, ngauss
 
 DEBUG = os.environ.get("TEST_CUBEMODEL_DEBUG")
@@ -412,36 +412,54 @@ class TestCubemodel(unittest.TestCase):
         # test for uniform image
         # create a uniform image (2D array)
         img_uniform = np.full((nx,ny),50)
-        crit, _ = markov(img_uniform)
+        crit_m, _ = markov(img_uniform)
+        crit_l1l2, _ = l1l2(img_uniform)
         # print(f"crit uni {crit}")
         # print(f"grad {grad}")
-        self.assertEqual(crit, 0,
+        self.assertEqual(crit_m, 0,
                          "markov regularization criterion \
+                         for a uniform image should be 0")
+        self.assertEqual(crit_l1l2, 0,
+                         "l1l2 regularization criterion \
                          for a uniform image should be 0")
 
         # adding a constant should not change result
         img_uniform += 50
-        crit_const, _ = markov(img_uniform)
+        crit_m_const, _ = markov(img_uniform)
+        crit_l1l2_const, _ = l1l2(img_uniform)
         # print(f"crit uni const {crit_const}")
         # print(f"grad {grad}")
-        self.assertEqual(crit_const, crit,
+        self.assertEqual(crit_m_const, crit_m,
                          "markov regularization criterion \
                          for a uniform image should be 0")
+        self.assertEqual(crit_l1l2_const, crit_l1l2,
+                         "l1l2 regularization criterion \
+                         for a uniform image should be 0")
+
         # test for spiked image
         img_spike = np.full((nx,ny),50)
         img_spike[4:6, 4:6] = 100
-        crit_spike, _ = markov(img_spike)
-        self.assertGreater(crit_spike, 100,
+        crit_m_spike, _ = markov(img_spike)
+        crit_l1l2_spike, _ = l1l2(img_spike)
+        self.assertGreater(crit_m_spike, 100,
                            "markov regularization criterion \
                            for a spike image should be high")
-        #
+        self.assertGreater(crit_l1l2_spike, 100,
+                           "l1l2 regularization criterion \
+                           for a spike image should be high")
+       #
         # print(f"crit spike {crit_spike}")
         # print(f"grad {grad}")
         # test for random image
         img_rand = np.random.normal(0, 1, (nx,ny))
-        crit_rand, _ = markov(img_rand)
-        self.assertLess(crit_rand, crit_spike,
+        crit_m_rand, _ = markov(img_rand)
+        crit_l1l2_rand, _ = l1l2(img_rand)
+        self.assertLess(crit_m_rand, crit_m_spike,
                         "markov regularization criterion \
+                        for a random image should be \
+                        less than a spiked one")
+        self.assertLess(crit_l1l2_rand, crit_l1l2_spike,
+                        "l1l2 regularization criterion \
                         for a random image should be \
                         less than a spiked one")
 
@@ -449,9 +467,14 @@ class TestCubemodel(unittest.TestCase):
         # print(f"grad {grad}")
         img_pattern = np.zeros((nx,ny))
         img_pattern[5:9] = 1
-        crit_pattern, _ = markov(img_pattern)
-        self.assertLess(crit_pattern, crit_rand,
+        crit_m_pattern, _ = markov(img_pattern)
+        crit_l1l2_pattern, _ = l1l2(img_pattern)
+        self.assertLess(crit_m_pattern, crit_m_rand,
                         "markov regularization criterion \
+                        for an image with geometric pattern should be \
+                        less than a for a random one")
+        self.assertLess(crit_l1l2_pattern, crit_l1l2_rand,
+                        "l1l2 regularization criterion \
                         for an image with geometric pattern should be \
                         less than a for a random one")
 
