@@ -245,7 +245,8 @@ class TestCubemodel(unittest.TestCase):
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = (5, 5, 433)
         # Model we want to test
-        model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz), regularization=None)
+        model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz),
+                          regularization=None)
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d = (1,1, 0.5, 0.5,0.1)
         # Initial guess for fit. Can be 1D or 3D.
@@ -269,7 +270,8 @@ class TestCubemodel(unittest.TestCase):
         # Model we want to test
         profile = DopplerLines(2.166120, profile=ngauss)
         profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata, regularization=None)
+        model = CubeModel(profile=profile, profile_xdata=profile_xdata,
+                          regularization=None)
 
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d=(1.2, 0.5, 25., 100)
@@ -296,7 +298,8 @@ class TestCubemodel(unittest.TestCase):
         # Model we want to test
         profile = DopplerLines(2.166120, profile=ngauss)
         profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata, regularization=None)
+        model = CubeModel(profile=profile, profile_xdata=profile_xdata,
+                          regularization=None)
 
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d=(1.2, 0.5, 25., 100)
@@ -333,7 +336,8 @@ class TestCubemodel(unittest.TestCase):
         xtest_normed=(xtest-poffset[np.newaxis, np.newaxis, :])/pscale[np.newaxis, np.newaxis, :]
 
         profile = gauss
-        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
+        model = CubeModel(profile=profile, profile_xdata=waxis,
+                          regularization=None)
         model.data = model.model(xreal)
         val = model.criterion(xtest)
 

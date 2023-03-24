@@ -210,6 +210,8 @@ class CubeModel:
         #else:
         #    self.regularization = markov
         # TODO regularization should ? default to markov
+        if (regularization is None):
+            self.regularization = l1l2
 
         # function/methods should be the dopplerlin eval func
         self.profile = profile
