@@ -205,11 +205,11 @@ class CubeModel:
     def __init__(self, data=None, profile=None, profile_xdata=None, weight=None,
                  scale=None, delta=None, pscale=None, poffset=None,
                  ptweak=None, regularization=None, decorrelate=None):
-        if (regularization is not None):
-            self.regularization = regularization
-        else:
-            self.regularization = markov
-            # TODO regularization should default to markov
+        #if (regularization is not None):
+        self.regularization = regularization
+        #else:
+        #    self.regularization = markov
+        # TODO regularization should ? default to markov
 
         # function/methods should be the dopplerlin eval func
         self.profile = profile
@@ -488,7 +488,7 @@ class CubeModel:
             print(f"shape xs {xs.shape}")
 
         if (self.ptweak is not None):
-            derivatives = self.ptweak(xs)
+            _, derivatives = self.ptweak(xs)
             if (derivatives is not None
                 and (derivatives.size != xs.size
                      or (np.asarray(derivatives.shape) != xs.shape).any())):
@@ -583,29 +583,30 @@ class CubeModel:
         # TODO for debug only
         for k in range(d[2]):
             # TODO pass dict to regularization function
-            if self.scale is not None and self.delta is not None:
-                # print("scale delta not None")
-                tmp, g = self.regularization(xbig[:, :, k],
+            if self.regularization is not  None:
+                if self.scale is not None and self.delta is not None:
+                    # print("scale delta not None")
+                    tmp, g = self.regularization(xbig[:, :, k],
                                          self.scale[k], self.delta[k])
-            else:
-                # print("scale delta None")
-                tmp, g = self.regularization(xbig[:, :, k])
+                else:
+                    # print("scale delta None")
+                    tmp, g = self.regularization(xbig[:, :, k])
 
-            tmp = tmp / 4.
+                tmp = tmp / 4.
 
             # TODO change
-            if (self.dbg):
-                self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
-                print(f"g after regul {g}")
-                print(f"g is a {g.shape}")
+                if (self.dbg):
+                    self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
+                    print(f"g after regul {g}")
+                    print(f"g is a {g.shape}")
             # if (returnmaps):
             #    maps[:,:,k] =  tmp[:d[0], :d[1]]
             # tmp=0
-            res += tmp
+                res += tmp
             # TODO indices commence a 0 ?
             # print(f"d[0] {d[0]} d[1] {d[1]} ")
             #gx[:, :, k] += g
-            gx[:, :, k] += g[0:d[0]:+1, 0:d[1]:+1]
+                gx[:, :, k] += g[0:d[0]:+1, 0:d[1]:+1]
             # Compared to Yorick version :
             # TODO modify yorick version if needed to compare
             # no need to add the 4 quadrants since
