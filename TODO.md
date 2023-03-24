@@ -63,7 +63,7 @@ For instance the checklists below follow this syntax:
             organized pattern (for instance left half=-1, right
             half=1). Check that l1l2 and markov return a (much) larger
             value for random noise than for the organized pattern.;
-      - [ ] Check gradient (compare gradient provided by l1l2 and
+      - [~] Check gradient (compare gradient provided by l1l2 and
             markov with a numerical estimate);
       - [ ] Verify that setting scale and delta does change the
             result, coherently with expectations, including gradient
