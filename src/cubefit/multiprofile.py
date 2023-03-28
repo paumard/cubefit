@@ -76,12 +76,12 @@ from scipy import optimize
     Gaussian profiles (note that linear() is provided by
     multiprofile.i). You have "guessed" as l0 and l1 the two
     corresponding parameters:
-   
+
      linX=mp_setx(profile=linear, realX=x, npar=2)
      MultiX=mp_setx(profile=gauss, realX=x, npar=3, ncomp=3, more=linX)
      a=_(a1, a2, a3, [l0, l1])
      result=mpfit(mp_func, MultiX, a, y, deriv=1)
-   
+
    FUNCTIONS PROVIDED BY MULTIPROFILE.I
     mp_func: the F parameter to lmfit when using multiprofile.i
     mp_setx: helper function to set-up the complex model function
@@ -95,7 +95,7 @@ from scipy import optimize
              derivatives
     poly_lmfit  : same as poly() (compute 1D polynomials), with
              lmfit-friendly calling sequence and derivatives.
-            
+
     offsetlines: an lmfit-friendly function for fitting lines on a
              spectrum. It exemplifies advanced usage of multiprofile.
     ol_setx: helper function akin to mp_setx, for use with
@@ -104,17 +104,17 @@ from scipy import optimize
    SEE ALSO: lmfit, mp_func, mp_setx, mp_getx, mp_seta, linear,
              linear2d, poly_lmfit, gauss, gauss2d, moffat1d, moffat2d,
              offsetlines, ol_setx
-"""    
+"""
 
 #func mp_func(x,a,&grad,&comps,deriv=,returncomps=){
-def mp_func(x,*a,deriv=None):
+def mp_func(x,*a):
     """
      DOCUMENT mp_func(x,a,&grad,deriv=)
 
 	    A general  purpose routine to easily create  multicomponents profiles. The
 	    parameter scheme may  seem odd, but it is intended to  be easily used with
 	    lmfit. See "multiprofile" for an introduction.
-	
+
 	    X: this parameter should be set using MP_SETX (which see). It
 	       contains both the "real" independent variables and a
 	       description of the model, split into several components.
@@ -136,10 +136,10 @@ def mp_func(x,*a,deriv=None):
 	    COMPS: multiprofile can return the individual profiles of each
 	       component in a 4th positional argument. Set RETURNCOMPS for
 	       this to happen. COMPS(,C) is the C-th component.
-	        TODO: python return more than one variable 
+	        TODO: python return more than one variable
 
 	   EXAMPLE:
-	
+
 	    require,"gauss.i"
 	    require,"multiprofile.i"
 	    axis=span(-10,10,101)
@@ -148,7 +148,7 @@ def mp_func(x,*a,deriv=None):
 	    a=[10,-5,2.,7,4,1.5,100,0.5]
 	    y=mp_func(x,a)
 	    plg,y,axis
-	    
+
 	   SEE ALSO: lmfit, multiprofile
 	"""
 	#mp_getx call
@@ -162,33 +162,34 @@ def mp_func(x,*a,deriv=None):
     more=x[5]
 
     #profile = func set by mp_set
-    y=profile(realX,*a[0:npar],deriv=deriv)
+    print(f"a[0:npar] {a[0:npar]}")
+    y,gradc=profile(realX,*a[0:npar])
 
     #call jac
-    gradc=jac(realX,*a[0:npar])
+    #gradc=jac(realX,*a[0:npar])
+    # TODO compute returncomps or ....
+    #if (returncomps is not None and returncomps is True):
+    #    comps=np.full((y.size),ncomp)
+    #    #comps(,1)=y
+    #    np.append(comps,y)
 
-    if (returncomps):
-        comps=np.full((y.size),ncomp)
-        #comps(,1)=y
-        np.append(comps,y)
-	
-    if (deriv):
-        #jac call
-        grad=np.array((a.size),y)
-        #grad(..,1:npar)=gradc ??
-        grad[1:npar]=gradc
-	
+    #if (deriv):
+    #jac call
+    grad=np.array((a.size),y)
+    #grad(..,1:npar)=gradc ??
+    grad[1:npar]=gradc
+
     if (equal is not None):
         for i in range(ncomp):
-            y2=profile(realX,a[i*npar+1:(i+1)*npar],deriv=deriv)
-            jac2=profile(realX,a[i*npar+1:(i+1)*npar])
+            y2,jac2=profile(realX,a[i*npar+1:(i+1)*npar])
+            # jac2=profile(realX,a[i*npar+1:(i+1)*npar])
             y=y+y2
 
-            if (returncomps):
-                comps[:,i+1]=y2
-            if (deriv):
-                grad[:,i*npar+1:(i+1)*npar]=gradc
-	
+            #if (returncomps):
+            #    comps[:,i+1]=y2
+            #if (deriv):
+            grad[:,i*npar+1:(i+1)*npar]=gradc
+
         next=ncomp*npar+1
     else:
         template=np.array(npar)
@@ -200,34 +201,90 @@ def mp_func(x,*a,deriv=None):
         for i in range(ncomp):
             template[ind]=a[npar+(i-1)*np2+1:npar+i*np2]
             #TODO on ecrase gradc ?
-            y2=profile(realX,template,gradc,deriv=deriv)
-            gradc=profile(realX,*template)
+            y2, gradc=profile(realX,*template)
+            #gradc=profile(realX,*template)
             y=y+y2
-            if (returncomps):
-                comps[:,i+1]=y2
-            if (deriv):
-                grad[:,npar+(i-1)*np2+1:npar+i*np2]=gradc[:,ind]
-                grad[:,equal] += gradc[:,equal]
+            #if (returncomps):
+            #    comps[:,i+1]=y2
+            #if (deriv):
+            grad[:,npar+(i-1)*np2+1:npar+i*np2]=gradc[:,ind]
+            grad[:,equal] += gradc[:,equal]
         next=npar+np2*(ncomp-1)+1
 
     if (more is not None):
         if (more[1] is None):
             more[1] = realX
         #a(next:0) => a[-a.size-1+next:]
-        y += mp_func(more,a[-a.size-1+next:],deriv=deriv)
-        if (deriv):
-            grad[:,next:a.size]=gradc
+        y += mp_func(more,a[-a.size-1+next:])
+        #if (deriv):
+        grad[:,next:a.size]=gradc
 
-    return y
+    return y,grad
 
-#func mp_setx (profile=, npar=, ncomp=, realX=, more=, equal=) { 
-def mp_setx (profile=None, npar=None, ncomp=None, realX=None, more=None, equal=None): 
+#
+#def mp_func(x, a, grad=None, comps=None, deriv=None, returncomps=None):
+#    npar = len(x)
+#    ncomp = len(a) // npar
+#    y = np.zeros_like(x)
+#    gradc = np.zeros((len(x), npar)) if grad is not None else None
+#
+#    if returncomps:
+#        comps = np.zeros((len(x), ncomp))
+#        comps[:, 0] = y
+#
+#    if deriv:
+#        grad[..., :npar] = gradc
+#
+#    if deriv is None:
+#        deriv = False
+#
+#    if not equal:
+#        for i in range(1, ncomp):
+#            y2, gradc = profile(realX, a[i*npar:(i+1)*npar], gradc, deriv=deriv)
+#            y += y2
+#            if returncomps:
+#                comps[:, i] = y2
+#            if deriv:
+#                grad[..., i*npar:(i+1)*npar] = gradc
+#        next = ncomp*npar
+#
+#    else:
+#        template = np.ones(npar)
+#        template[equal] = a[equal]
+#        ind = np.where(template != 1)[0]
+#        template[equal] = 1
+#        np2 = npar - len(equal)
+#
+#        for i in range(1, ncomp):
+#            template[ind] = a[npar+(i-1)*np2:npar+i*np2]
+#            y2, gradc = profile(realX, template, gradc, deriv=deriv)
+#            y += y2
+#            if returncomps:
+#                comps[:, i] = y2
+#            if deriv:
+#                grad[..., npar+(i-1)*np2:npar+i*np2] = gradc[:, ind]
+#                grad[..., equal] += gradc[..., equal]
+#
+#        next = npar + np2*(ncomp-1)
+#
+#    if more is not None:
+#        if len(more) < 2:
+#            more.insert(1, realX)
+#        y += mp_func(more, a[next:], gradc, deriv=deriv)
+#        if deriv:
+#            grad[..., next:] = gradc
+#
+#    return y
+#
+
+#func mp_setx (profile=, npar=, ncomp=, realX=, more=, equal=) {
+def mp_setx (profile=None, npar=None, ncomp=None, realX=None, more=None, equal=None):
     """
     DOCUMENT x=mp_setx(profile=myfunc, npar=npar, ncomp=ncomp,
                       realX=realX, more=more, equal=equal)
 
     Set x parameter for use with mp_func
-    
+
     PROFILE: function to be used as base profile, same restrictions as
              for LMFIT
     NPAR:    number of parameters needed by base profile
@@ -239,7 +296,7 @@ def mp_setx (profile=None, npar=None, ncomp=None, realX=None, more=None, equal=N
              function)
     EQUAL: vector containing the indices of the parameters of the base
              profile which should be the same for every components.
-             
+
    SEE ALSO: mp_func, mp_seta, mp_getx, multiprofile
     """
     #ncomp=ncomp?ncomp:1
@@ -312,16 +369,18 @@ def mp_seta(params,equal=None,more=None,get=None):
 
     #TODO return index
     #peigne=(indgen[ncomp]-1)*(npars-npeq)
+    # -1 ou pas ?
+    peigne=np.fromiter(range(0,ncomp),int)*(npars-npeq)
 
     if (ncomp >1 and npeq >0):
         peigne[1:] += npeq
 
     for p in range(npars):
-        if (np.were(equal==p)[0].size == 0):
-            if (get is not None): 
+        if (np.where(equal==p)[0].size == 0):
+            if (get is not None):
                 #params(,p)=a(p+peigne);
                 params[:,p]=a[p+peigne]
-            else: 
+            else:
                 a[p+peigne]=params[:,p]
         else:
             if (get is not None):
@@ -329,16 +388,16 @@ def mp_seta(params,equal=None,more=None,get=None):
             else:
                 a[p]=params[0,p]
 
-            if (ncomp >1): 
+            if (ncomp >1):
                 peigne[2:] -= 1
-    
+
     if (more is not None):
         if (get is not None):
             #more=a(1-numberof(more):);
             more=a[1-more.size:]
         #a(1-numberof(more):)=more;
-        a[1-moze.size:]=more;
-    
+        a[1-more.size:]=more;
+
     return a;
 
 #primitives
@@ -370,7 +429,7 @@ def linear2d(xy,a,deriv=None):
          or linear2d(xy,a,grad,deriv=1)
 
     a(1)+x*a(2)+y*a(3) where x=xy(..,1); y=xy(..,2).
- 
+
     Returns derivatives if DERIV set to a "true" value. Very
     simplistic, but might come in handy, as it is compatible with
     lmfit (and multiprofile).
@@ -411,18 +470,18 @@ def poly_lmfit(x,a,deriv=None):
         grad[:,0]=1
         if (degp1>=1):
             grad[:,1]=x
-        for n in np.arange(2,degp1): 
+        for n in np.arange(2,degp1):
             grad[:,n+1]=x**n
 
-    if (degp1==1): 
+    if (degp1==1):
         #return np.array[a(1), dimsof(x)];
         return np.full(x.shape,a[1])
 
     y=a[0]+a[1]*x
 
-    for n in np.arange(2,degp1): 
+    for n in np.arange(2,degp1):
         y+=a[n]*x**(n-1);
-    
+
     return y;
 
 # Fit doppler-shifted lines over a spectrum
@@ -431,7 +490,7 @@ def poly_lmfit(x,a,deriv=None):
 def ol_setx(profile=None, realX=None, lines=None, positivity=None, intensities=None, fixedratio=None):
     """
     DOCUMENT X=ol_setx(profile=profile, realX=, lines=, positivity=
-     
+
     Set up X parameter for offsetlines().
 
     profile: model function for individual line (default: moffat1d);
@@ -452,13 +511,14 @@ def ol_setx(profile=None, realX=None, lines=None, positivity=None, intensities=N
 
     SEE ALSO: offsetlines
     """
-    
+
     if (profile is None):
         #require, "moffat.i"; https://docs.astropy.org/en/stable/modeling/reference_api.html
-        #TODO   import moffat.py
-        profile=Moffat1D;
+        #TODO
+        from moffat import moffat1d
+        profile=moffat1d;
 
-    if (fixedratio is None): 
+    if (fixedratio is None):
         #fixedratio=!is_void(intensities);
         fixedratio= not intensities
 
@@ -510,7 +570,7 @@ def offsetlines(x,a,deriv=None,returncomps=None):
       // Basic set-up
       x = span(2.0, 2.4, 200);        // set up wavelength (or
                                       // frequency) vector
-                               
+
       lines=[2.058, 2.15, 2.16, 2.3]; // give rest wavelength or
                                       // frequency of each line
 
@@ -526,7 +586,7 @@ def offsetlines(x,a,deriv=None,returncomps=None):
       res=lmfit(offsetlines, olx, A, y_obs,deriv=1);
       fma; plg, y_obs, x;
       plg, offsetlines(olx, A), x, color="red";
-      
+
       // Prepare spectrum, setting INTENSITIES in ol_setx
       olx=ol_setx(realX=x, lines=lines, intensities=[1., 0.5, 0.6, 1.2]);
       A=[1., 0.02, 0.005, 1.1];
@@ -538,7 +598,7 @@ def offsetlines(x,a,deriv=None,returncomps=None):
       res=lmfit(offsetlines, olx, A, y_obs, deriv=1);
       fma; plg, y_obs, x;
       plg, offsetlines(olx, A), x, color="red";
-      
+
       SEE ALSO: ol_setx, lmfit, multiprofile, moffat1d.
     """
 
@@ -572,7 +632,7 @@ def offsetlines(x,a,deriv=None,returncomps=None):
 
         if (positivity is not None):
             ind=np.where(positivity==-1)[0]
-            if (ind.size): 
+            if (ind.size):
                 pars[ind,1]=-abs(pars[ind,1])
 
             ind=np.where(positivity==1)[0]
@@ -586,28 +646,29 @@ def offsetlines(x,a,deriv=None,returncomps=None):
     a2=mp_seta(pars);
     X=mp_setx(npar=npars,ncomp=nlines,realX=realX,profile=profile);
     #TODO call jac sp=mp_func(X,a2, grad2, deriv=deriv);
-    sp=mp_func(X,a2,deriv=deriv);
+    sp,grad2=mp_func(X,a2)
 
-    if (deriv):
-        peigne=(indgen(nlines)-1)*npars
-        grad=np.array((sp.shape, a.size))
-        if (fixedratio): 
-            grad[:,0]=sp
-        else: 
-            grad[:,0:nlines]=grad2[:,0+peigne]
-        if fixedratio:
-            offset=nlines-1
-        else:
-            offset=0
-        for i in range(npars):
-            #TODO sum
-            #grad[:,i+offset]=grad2[:,peigne+i](:,sum)
-            print("sum")
+    #if (deriv):
+    # peigne=(indgen(nlines)-1)*npars
+    peigne = np.fromiter(range(0,nlines),int)*npars
+    grad=np.array(sp.shape, a.size)
+    if (fixedratio):
+        grad[:,0]=sp
+    else:
+        grad[:,0:nlines]=grad2[:,0+peigne]
+    if fixedratio:
+        offset=nlines-1
+    else:
+        offset=0
+    for i in range(npars):
+        #TODO sum
+        #grad[:,i+offset]=grad2[:,peigne+i](:,sum)
+        print("sum")
 
     if (fixedratio):
         sp *= a[0]
 
-    return sp
+    return sp, grad
 
 
 
@@ -618,12 +679,12 @@ def test_offsetlines():
     # s1.width = factor
     # s1.x_0 = lines[0]
     # plt.plot(r, s1(r), color=str(0.25 * factor), lw=2)
-    
+
     # Basic set-up
-    
+
     #set up wavelength (or frequency) vector
     x = np.linspace(2.0, 2.4, 200)
-    
+
     # give rest wavelength or frequency of each line
     lines=np.array([2.058, 2.15, 2.16, 2.3])
 
@@ -641,17 +702,20 @@ def test_offsetlines():
 
     # Fit with free intensities
     print("Fit with free intensities")
-    y_obs= y+0.2*random_n(dimsof(y))
-    res=lmfit(offsetlines, olx, A, y_obs,deriv=1)
-
+    # y_obs= y+0.2*random_n(dimsof(y))
+    y_obs= y+0.2*np.random.normal(0, 1, y.shape)
+    #res=lmfit(offsetlines, olx, A, y_obs,deriv=1)
+    res,req=optimize.curve_fit(offsetlines, olx, A, y_obs)
+    #resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
+    #                                            jac=curve_fit_func.jac)
     #fma; plg, y_obs, x
     #plg, offsetlines(olx, A), x, color="red";
-      
+
     #Prepare spectrum, setting INTENSITIES in ol_setx
     olx=ol_setx(realX=x, lines=lines, intensities=[1., 0.5, 0.6, 1.2]);
     A=[1., 0.02, 0.005, 1.1];
     y=offsetlines(olx, A);
-   
+
     #fma; plg, y, x;
 
     # Fit with tied intensities

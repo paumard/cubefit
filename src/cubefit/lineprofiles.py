@@ -48,7 +48,7 @@ def gauss(x, *a):
     jac : array like
         The Jacobian matrix of the model, with shape x.size × a.size
         (if x is a 1D array) or a.size (if x is a scalar).
-    
+
     Notes
     -----
     Returns a Gaussian:
@@ -134,7 +134,7 @@ def ngauss(x, *a):
     jac : array like
         The Jacobian matrix of the model, with shape x.size × a.size
         (if x is a 1D array) or a.size (if x is a scalar).
-    
+
     Notes
     -----
     Returns a normalised Gaussian:
@@ -155,7 +155,7 @@ def ngauss(x, *a):
     cubefit.lineprofiles.gauss
     '''
 
-    # ensure a and x are numpyt arrays and not some other array_like
+    # ensure a and x are numpy arrays and not some other array_like
     # promote to at least float64
     a = np.asarray(a)
     a = np.promote_types(a.dtype, np.float64).type(a)
@@ -192,7 +192,7 @@ class WrapToCurveFit:
     Parameters
     ----------
     profile : callable
-        A curvefit.lineprofiles profile. 
+        A curvefit.lineprofiles profile.
     '''
     def __init__(self, profile):
         self.profile=profile
