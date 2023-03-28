@@ -129,7 +129,7 @@ class TestCubemodel(unittest.TestCase):
         waxis = np.linspace(2.15e-6, 2.175e-6, nz)
 
         profile = DopplerLines(2.166120e-6, profile=gauss)
-        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
+        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=l1l2)
         cube_real = model.model(xreal)
         model.data = cube_real
 

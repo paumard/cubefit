@@ -1,16 +1,15 @@
+#!/usr/bin/env python3
 
 import numpy as np
-from math import sqrt
+# from math import sqrt
 import matplotlib.pyplot as plt
-
 from scipy import optimize
 
 
+# TODO: integrate in lineprofiles.py
 
-#TODO: integrate in lineprofiles.py
-#TODO &grad moffat1d
-#func moffat1d(x,a2,&grad,deriv=){
-def moffat1d(x,*a):
+
+def moffat1d(x, *a):
     '''Compute a Moffat profile.
 
     Parameters
@@ -20,11 +19,11 @@ def moffat1d(x,*a):
         profile must be computed.
     a : array_like
         Parameters of the Moffat: (I0, x0, dx [, offset [, slope]]) with:
-        I0: peak value
-        x0: center
-        dx: Gaussian standard deviation
-        offset (optional): constant offset
-        slope (optional): linear offset
+        I0 : peak value
+        x0 : center
+        dx : Gaussian standard deviation
+        offset (optional) : constant offset
+        slope (optional) : linear offset
 
     Returns
     -------
@@ -49,7 +48,7 @@ def moffat1d(x,*a):
         k0=a[4]
         k1=a[5]
 
-    This function can be used directly with lmfit.
+    This function can be used directly with curve_fit.
 
     Limitation: "b"  should  always  be  positive.  In  order  to  force  it,
     especially in fitting routines, its  abolute value is taken (except at some
@@ -60,11 +59,12 @@ def moffat1d(x,*a):
     cubefit.lineprofiles.ngauss moffat1d_fit, asmoffat1d, asmoffat1d_fit
     '''
 # from chatgpt
+    # TODO python flavor ?
     __moffat_betamax = None
     __moffat_vmax = None
     __moffat_gradmax = None
-    #a = np.double(a)
-    print(f"DBG CALL moffat1d")
+    a = np.asarray(a)
+    print("DBG CALL moffat1d")
     print(f"a {a}")
     # global __moffat_betamax, __moffat_vmax, __moffat_gradmax
     if __moffat_gradmax is None:
@@ -73,6 +73,9 @@ def moffat1d(x,*a):
         big = __moffat_betamax
     else:
         big = 1e18
+
+    a = np.asarray(a)
+    print(f"a asarray {a}")
     nterms = len(a)
     if __moffat_vmax:
         if abs(a[1]) > __moffat_vmax:
@@ -125,36 +128,35 @@ def moffat1d(x,*a):
     if len(ind3[0]) > 0:
         grad[ind3] = 0
         # print("MOFFAT warning: grad underflows caught, grad is inaccurate.")
-    return res
+    return res, grad
 
 
-def asmoffat1d(x,a2,grad,deriv=None):
+def asmoffat1d(x, *a):
     '''Compute an asymmetrical Moffat profile
-    /* DOCUMENT asmoffat1d(x,a)
 
     Returns a (1D) asymmetrical Moffat profile:
     I=I0*(1+((x-x0)/dx)^2)^-b [+ k0 [+ k1*x]]
 
     Where:
-    I0=a(1)
-    x0=a(2) ; deriv: 2*I0*b*(x-x0)/(dx^2)*(1+((x-x0)/dx)^2)^(-b-1)
-    dx for x<x0 =a(3) ; deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
-    b for x<x0 =a(4)
-    dx for x>=x0 =a(5) ; deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
-    b for x>=x0 =a(6)
+    I0 = a[0]
+    x0 = a[1]  deriv: 2*I0*b*(x-x0)/(dx^2)*(1+((x-x0)/dx)^2)^(-b-1)
+    dx for x<x0 = a[2] deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
+    b for x<x0  = a[3]
+    dx for x>=x0 = a[4] deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
+    b for x>=x0 = a[5]
 
     and if a is of length 7 or 8:
-    k0=a(7)
-    k1=a(8)
+    k0=a[6]
+    k1=a[7]
 
-    This function can be used directly with lmfit.
+    This function can be used directly with curve_fit.
 
-   SEE ALSO: moffat1d, moffat1d_fit, asmoffat1d_fit
-    */
+    See Also
+    --------
+    moffat1d, moffat1d_fit, asmoffat1d_fit
     '''
 # from chatgpt
-#def asmoffat1d(x, a2, grad=None, deriv=False):
-    a = np.double(a2)
+    a = np.asarray(a)
     __moffat_betamax = np.inf
     __moffat_vmax = np.inf
     __moffat_gradmax = 1e150
@@ -162,8 +164,8 @@ def asmoffat1d(x,a2,grad,deriv=None):
         big = __moffat_betamax
     else:
         big = 1e18
-    nterms = a.shape[0]
-    if __moffat_vmax and abs(a[1]) > __moffat_vmax:
+    nterms = len(a)
+    if __moffat_vmax and np.abs(a[1]) > __moffat_vmax:
         grad = np.zeros((x.size, nterms))
         return np.zeros_like(x)
     small = 1e-80
@@ -179,8 +181,9 @@ def asmoffat1d(x,a2,grad,deriv=None):
     u4b = u2b ** 2
     u3a = 1 + u4a
     u3b = 1 + u4b
+    # TODO u3 not used ?
     u3 = u3a * ta + u3b * tb
-    if abs(a[3]) > big:
+    if np.abs(a[3]) > big:
         u1a = np.zeros_like(x)
         u1ab = u1a
         ind = np.where(u4a == 0)[0]
@@ -188,9 +191,9 @@ def asmoffat1d(x,a2,grad,deriv=None):
             u1a[ind] = 1
             u1ab[ind] = 1
     else:
-        u1a = u3a ** -abs(a[3])
+        u1a = u3a ** -np.abs(a[3])
         u1ab = u3a ** (-abs(a[3]) - 1)
-    if abs(a[5]) > big:
+    if np.abs(a[5]) > big:
         u1b = np.zeros_like(x)
         u1bb = u1b
         ind = np.where(u4b == 0)[0]
@@ -198,8 +201,8 @@ def asmoffat1d(x,a2,grad,deriv=None):
             u1b[ind] = 1
             u1bb[ind] = 1
     else:
-        u1b = u3b ** -abs(a[5])
-        u1bb = u3b ** (-abs(a[5]) - 1)
+        u1b = u3b ** -np.abs(a[5])
+        u1bb = u3b ** (-np.abs(a[5]) - 1)
     u1 = u1a * ta + u1b * tb
     u1B = u1ab * ta + u1bb * tb
     res = a[0] * u1
@@ -207,128 +210,70 @@ def asmoffat1d(x,a2,grad,deriv=None):
         res += a[6]
     if nterms == 8:
         res += a[7] * x
-    if deriv:
-        grad = np.zeros((x.size, nterms))
-        grad[:, 0] = u1
-        if np.max(u1B):
-            grad[:, 1] = 2 * a[0] * (
-                a[3] * u2a / a[2] * u1ab * ta + a[5] * u2b / a[4] * u1bb * tb
+    # if deriv:
+    grad = np.zeros((x.size, nterms))
+    grad[:, 0] = u1
+    if np.max(u1B):
+        grad[:, 1] = 2 * a[0] * (
+            a[3] * u2a / a[2] * u1ab * ta + a[5] * u2b / a[4] * u1bb * tb
             )
-        if np.max(u1ab):
-            grad[:, 2] = 2 * a[0] * (a[3] * u4a / a[2] * u1ab * ta)
-        grad[:, 3] = -a[0] * np.log(u3a)*u1a*ta
-        if np.max(u1bb):
-            grad[:,4]=2*a[0]*(a[5]*u4b/a[4]*u1bb*tb)
-#        grad(,6)=-a(1)*log(u3b)*u1b*tb;
-#        // Useless line due to initialisation:
-#        //if (nterms>6) grad(,7)=0;
-#        if (nterms==8) grad(,8)=x;
-#        // try to avoid overflows in lmfit.
-#        ind1=where(grad>__moffat_gradmax);
-#        if (numberof(ind1)) {
-#            grad(ind1)=__moffat_gradmax;
-#            write,"MOFFAT warning: grad overflows caught, grad is inaccurate.";
-#        }
-#        ind2=where(grad<-__moffat_gradmax);
-#        if (numberof(ind2)) {
-#            grad(ind2)=-__moffat_gradmax;
-#            write,"MOFFAT warning: grad overflows caught, grad is inaccurate.";
-#        }
-#        // try to avoid underflows in lmfit.
-#        ind3=where(abs(grad)<1/__moffat_gradmax);
-#        if (numberof(ind3)) {
-#            grad(ind3)=0;
-#            //write,"MOFFAT warning: grad underflows caught, grad is inaccurate.";
-#        }
-#    }
-#    return res;
-#
+    if np.max(u1ab):
+        grad[:, 2] = 2 * a[0] * (a[3] * u4a / a[2] * u1ab * ta)
+    grad[:, 3] = -a[0] * np.log(u3a)*u1a*ta
+    if np.max(u1bb):
+        grad[:, 4] = 2*a[0]*(a[5]*u4b/a[4]*u1bb*tb)
+    grad[:, 5] = -a[0]*np.log(u3b)*u1b*tb
+    # Useless line due to initialisation:
+    # if (nterms>6) grad(,7)=0;
+    if (nterms == 8):
+        grad[:, 7] = x
+    # try to avoid overflows in curve_fit.
+    ind1 = np.where(grad > __moffat_gradmax)[0]
+    if (np.size(ind1) > 0):
+        grad[ind1] = __moffat_gradmax
+        print("MOFFAT warning: grad overflows caught, grad is inaccurate.")
+
+    ind2 = np.where(grad < -__moffat_gradmax)[0]
+    if (np.size(ind2) > 0):
+        grad[ind2] = -__moffat_gradmax
+        print("MOFFAT warning: grad overflows caught, grad is inaccurate.")
+    # try to avoid underflows in curve_fit.
+    ind3 = np.where(np.abs(grad) < 1/__moffat_gradmax)[0]
+    if (np.size(ind3) > 0):
+        grad[ind3] = 0
+        print("MOFFAT warning: grad underflows caught, grad is inaccurate.")
+    return res, grad
 
 
-#/*func asmoffat(x,a,&grad,deriv=){
-#/* DOCUMENT asmoffat(x,a)
-#
-#    Returns a (1D) asymmetrical Moffat profile:
-#    I=I0*(1+((x-x0)/dx)^2)^-b [+ k0 [+ k1*x]]
-#
-#    Where:
-#    I0=a(1)
-#    x0=a(2) ; deriv: 2*I0*b*(x-x0)/(dx^2)*(1+((x-x0)/dx)^2)^(-b-1)
-#    dx for x<x0 =a(3) ; deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
-#    b for x<x0 =a(4)
-#    dx for x>=x0 =a(5) ; deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
-#    b for x>=x0 =a(6)
-#
-#    and if a is of length 7 or 8:
-#    k0=a(7)
-#    k1=a(8)
-#
-#    This function can be used directly with lmfit.
-#
-#   SEE ALSO: moffat, moffat_fit, asmoffat_fit
-#
-#    nterms=numberof(a);
-#    ta=(x<a(2));
-#    tb=(x>=a(2));
-#    //xa=x*ta;
-#    //xb=x*tb;
-#    u2a=(x-a(2))/a(3);
-#    u2b=(x-a(2))/a(5);
-#    u4a=u2a^2;
-#    u4b=u2b^2;
-#    u3a=1+u4a;
-#    u3b=1+u4b;
-#    u3=u3a*ta+u3b*tb;
-#    u1a=u3a^-a(4);
-#    u1b=u3b^-a(6);
-#    u1=u1a*ta+u1b*tb;
-#    res=a(1)*u1;
-#    if (nterms>6) res=res+a(7);
-#    if (nterms==8) res=res+a(8)*x;
-#    if (deriv) {
-#        grad=array(double,numberof(x),nterms);
-#        grad(,1)=u1;
-#        grad(,2)=2*a(1)*(a(4)*u2a/a(3)*u3a^(-a(4)-1)*ta+a(6)*u2b/a(5)*u3b^(-a(6)-1)*tb);
-#        grad(,3)=2*a(1)*(a(4)*u4a/a(3)*u3a^(-a(4)-1)*ta);
-#        grad(,4)=-a(1)*log(u3)*u1*ta;
-#        grad(,5)=2*a(1)*(a(6)*u4b/a(5)*u3b^(-a(6)-1)*tb);
-#        grad(,6)=-a(1)*log(u3)*u1*tb;
-#        //if (nterms>6) grad(,7)=0;
-#        if (nterms==8) grad(,8)=x;
-#    }
-#    return res;
-#
-#    }*/
+def moffat1d_fit(y, x, w, guess=None, nterms=None, itmax=None):
+    '''Fits  a  moffat (see  moffat1d)  profile  on a  data  set  using
+    curve_fit  (see curve_fit).
 
-def moffat1d_fit(y,x,w,guess=None,nterms=None,itmax=None):
-    '''
-    /* DOCUMENT asmoffat1d_fit(y,x,w,guess=,nterms=)
+    The set  of  data points  Y  is the  only mandatory argument, X defaults
+    to indgen(numberof(y)), weights W are optional (see curve_fit).
+    MOFFAT1D_FIT tries to guess a set of initial parameters, but you can
+    (and  should  in every  non-trivial  case)  provide  one using  the
+    GUESS keyword. In  case you don't  provide a guess,  you should set NTERMS
+    to 4 (simple  moffat),  5  (adjust  constant  baseline)
+    or  6  (adjust  linear baseline). The returned  fitted parameters have
+    the same  format as GUESS, see moffat1d.
 
-    Fits  a  moffat (see  moffat1d)  profile  on a  data  set  using lmfit  (see
-    lmfit).  The set  of  data points  Y  is the  only  mandatory argument,  X
-    defaults   to   indgen(numberof(y)),   weights   W   are   optional   (see
-    lmfit). MOFFAT1D_FIT tries to guess a set of initial parameters, but you can
-    (and  should  in every  non-trivial  case)  provide  one using  the  GUESS
-    keyword. In  case you don't  provide a guess,  you should set NTERMS  to 4
-    (simple  moffat),  5  (adjust  constant  baseline)  or  6  (adjust  linear
-    baseline). The returned  fitted parameters have the same  format as GUESS,
-    see moffat1d.
-
-   SEE ALSO: moffat1d, asmoffat1d, asmoffat1d_fit
-    */
+    See Also
+    --------
+    moffat1d, asmoffat1d, asmoffat1d_fit
     '''
 # from chatgpt
-#import numpy as np
-#from lmfit import minimize, Parameters
+# import numpy as np
+# from curve_fit import minimize, Parameters
 #
-#def moffat1d(x, a):
+# def moffat1d(x, a):
 #    # Moffat function
 #    gamma = a['gamma'].value
 #    alpha = a['alpha'].value
 #    beta = a['beta'].value
 #    return beta / (1.0 + ((x - alpha) / gamma) ** 2) ** beta
 #
-#def moffat1d_fit(y, x=None, w=None, guess=None, nterms=None, itmax=None):
+# def moffat1d_fit(y, x=None, w=None, guess=None, nterms=None, itmax=None):
     if x is None:
         x = np.arange(len(y))
     if guess is None:
@@ -380,31 +325,31 @@ def moffat1d_fit(y,x,w,guess=None,nterms=None,itmax=None):
         guess.add('beta', 1.0)
 
     else:
-        nterms = len(guess)
+        nterms = guess.size
     result,req = optimize.curve_fit(moffat1d,x,y,guess, maxfev=itmax)
     return result
 
 def asmoffat1d_fit(y,x,w,guess=None,nterms=None):
-    '''
-    /* DOCUMENT asmoffat1d_fit(y,x,w,guess=,nterms=)
+    '''Fits an  assymetrical moffat  (see asmoffat1d) profile  on a data
+    set using curve_fit  (see  curve_fit).
 
-    Fits an  assymetrical moffat  (see asmoffat1d) profile  on a data  set using
-    lmfit  (see  lmfit). The  set  of  data points  Y  is  the only  mandatory
-    argument, X  defaults to indgen(numberof(y)), weights W  are optional (see
-    lmfit). ASMOFFAT1D_FIT tries  to guess a set of  initial parameters, but you
-    can (and  should in  every non-trivial case)  provide one using  the GUESS
-    keyword. In  case you don't  provide a guess,  you should set NTERMS  to 6
-    (simple assymmetrical  moffat), 7 (adjust constant baseline)  or 8 (adjust
-    linear baseline). The  returned fitted parameters have the  same format as
-    GUESS, see asmoffat1d.
+    The  set  of  data points  Y  is  the only  mandatory argument,
+    X defaults to indgen(numberof(y)), weights W are optional (see curve_fit).
+    ASMOFFAT1D_FIT tries to guess a set of initial parameters, but you
+    can (and  should in every non-trivial case) provide one using
+    the GUESS keyword. In  case you don't provide a guess, you should set
+    NTERMS to 6 (simple assymmetrical  moffat), 7 (adjust constant baseline)
+    or 8 (adjust linear baseline). The  returned fitted parameters have the
+    same format as GUESS, see asmoffat1d.
 
-   SEE ALSO: asmoffat1d, moffat1d, moffat1d_fit
-    */
+    See Also
+    --------
+    asmoffat1d, moffat1d, moffat1d_fit
     '''
-#import numpy as np
-#from scipy.optimize import least_squares, minimize_scalar
+# import numpy as np
+# from scipy.optimize import least_squares, minimize_scalar
 #
-#def asmoffat1d(x, a):
+# def asmoffat1d(x, a):
 #    I0, x0, dx, b, alpha, slope, offset = a
 #
 #    if np.abs(dx) < 1e-80:
@@ -498,11 +443,11 @@ def moffat2d(xy, a, grad, deriv=None):
         a = [I0, x0, y0, dx=dy, b] (then alpha=0)
      or a = [I0, x0, y0, dx, dy, b, alpha].
 
-    This function can be used directly with lmfit and provides
+    This function can be used directly with curve_fit and provides
     derivatives. Contrary to the similar functions gauss(), moffat1d()
     and gauss2d(), moffat2d() does not offer the possibility to add a
     linear background. See multiprofile.i for compositing several
-    lmfit functions.
+    curve_fit functions.
 
     Limitation:  "b"  should  always  be  positive.  In  order  to  force  it,
     especially in fitting routines, its  abolute value is taken (except at some
@@ -517,8 +462,8 @@ def moffat2d(xy, a, grad, deriv=None):
    SEE ALSO: moffat1d, gauss2d, moffat, moffatRound
     */
     '''
-#from chatgpt
-#import numpy as np
+# from chatgpt
+# import numpy as np
 #
 #def moffat2d(xy, a, deriv=True):
     a = np.array(a, dtype=np.float64)
@@ -566,8 +511,32 @@ def moffat2d(xy, a, grad, deriv=None):
         return mof
 
 
+class WrapToCurveFit:
+    '''Wrap a cubefit profile to a curve_fit objective function
+
+    Parameters
+    ----------
+    profile : callable
+        A curvefit.lineprofiles profile.
+    '''
+    def __init__(self, profile):
+        self.profile=profile
+
+    def __call__(self, xdata, *params):
+        '''self(xdata, *params) -> self.profile(xdata, *params)[0]
+        '''
+        return self.profile(xdata, *params)[0]
+
+    def jac(self, xdata, *params):
+        '''self.jac(xdata, *params) -> self.profile(xdata, *params)[1]
+        '''
+        return self.profile(xdata, *params)[1]
+
+
 
 def test_moffat():
+
+    # test moffat1d
     a = np.array([1, 1, 0.5, 0.5, 0.1])
     x = np.linspace(-10, 10, 3000)
     # print(x)
@@ -580,8 +549,42 @@ def test_moffat():
     plt.plot(x, ret_jac)
     plt.show()
 
-    # test ngauss
-    na = np.array([1, 1, 0.5, 0.5, 0.1])
+    sigma = 0.02
+    y = ret + np.random.standard_normal(ret.size) * sigma
+
+    # TODO add test of the gradient with a optimize.curve_fit
+    print("===FIT grad ==========")
+    a0 = np.array([1.5, 0.4, 2., 5., 1.5])
+
+    # wrap moffat1d in a way suitable for curve_fit
+    curve_fit_func = WrapToCurveFit(moffat1d)
+
+    resopt, reqcov = optimize.curve_fit(curve_fit_func, x, y, p0=a0)
+    resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, x, y, p0=a0,
+                                                jac=curve_fit_func.jac)
+
+    model = moffat1d(x, *resopt)[0]
+    model_jac = moffat1d(x, *resopt_jac)[0]
+    chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
+    chi2_jac = np.sum(((y-model_jac)/sigma)**2)/(y.size-a.size+1)
+
+    print("=======chi2")
+    print(f"chi2 reduit {chi2}")
+    print(f"chi2_jac reduit {chi2_jac}")
+    print(f"a0 {a0}")
+    print(f"resopt {resopt}")
+    print(f"resopt_jac {resopt_jac}")
+
+    plt.figure()
+    # plt.plot(waxis, dop(*a0))
+    plt.plot(x, model, label="model")
+    plt.plot(x, model_jac, label="model_jac")
+    plt.plot(x, y, label="y")
+    plt.legend()
+    plt.show()
+
+    # test asmoffat1d
+    na = np.array([1, 1, 0.5, 0.5, 0.1, 0.5])
     # x=np.arange(-50,50,0.3)
     # x=3.5
     nx = np.linspace(-10, 10, 3000)
@@ -603,12 +606,12 @@ def test_moffat():
     print("===FIT grad ==========")
     a0 = np.array([1.5, 0.4, 2., 5., 1.5])
 
-    # wrap gauss in a way suitable for curve_fit
-    #curve_fit_func=WrapToCurveFit(gauss)
+    # wrap moffat1d in a way suitable for curve_fit
+    curve_fit_func = WrapToCurveFit(asmoffat1d)
 
-    resopt, reqcov = optimize.curve_fit(moffat1d_fit, nx, y, p0=a0)
-    resopt_jac, reqcov_jac = optimize.curve_fit(moffat1d_fit, nx, y, p0=a0,
-                                                jac=curve_fit_func.jac)
+    resopt, reqcov = optimize.curve_fit(curve_fit_func, nx, y, p0=a0)
+    resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
+                                                jac=curve_fit_func)
 
     model = moffat1d(nx, *resopt)[0]
     model_jac = moffat1d(nx, *resopt_jac)[0]
@@ -633,4 +636,3 @@ def test_moffat():
 
 if __name__ == '__main__':
     test_moffat()
-

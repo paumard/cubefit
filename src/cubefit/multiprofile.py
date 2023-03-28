@@ -1,27 +1,17 @@
-import numpy as np
-import math
+#!/usr/bin/env python3
 
-from astropy.modeling.functional_models import Moffat1D
+import numpy as np
+# import math
+# from astropy.modeling.functional_models import Moffat1D
 
 import matplotlib.pyplot as plt
 from scipy import optimize
 
-
-#check wich lmfit
-# python3-lmfit
-# scipy.optimize
-# from ?? import lmfit
-
-
-
-"""
-   PURPOSE
-    multiprofile.i is a helper library for use with lmfit. It allows
+"""multiprofile.py is a helper library for use with curve_fit. It allows
     creating complex user functions by adding up already existing, simpler
     ones.
 
-   RATIONALE
-    Remember the lmfit calling sequence:
+    Remember the curve_fit calling sequence:
       result=lmfit(f, x, a, y, w, ...).
     where F is the model function to fit, X the "independent
     variables", which can indeed be anything required by F, A is the
@@ -29,32 +19,33 @@ from scipy import optimize
     optimal values for A, in order to minimize the distance between
     F(X,A) and Y.
 
-    In order for lmfit to converge efficiently, it is better if F is
-    able to compute its own gradient when called as f(x, a, grad,
-    deriv=1). Writing model functions that provide derivatives can be
-    tiresome and error-prone. The goal of multiprofile.i is to make
+    In order for curve_fit to converge efficiently, it is better if F is
+    able to compute its own gradient when called as f(x, *a)
+    Writing model functions that provide derivatives can be
+    tiresome and error-prone. The goal of multiprofile.py is to make
     this process faster and more reliable, by allowing one to build
     complex model functions from pre-existing, well-optimized and
     well-tested primitives with derivatives.
 
-    Of course, multiprofile.i is limited to a particular sub-set of
-    all the types of functions one might want to use lmfit on: it
+    Of course, multiprofile.py is limited to a particular sub-set of
+    all the types of functions one might want to use curve_fit on: it
     concentrates on the case where the model function is the sum of
     simpler profiles, either of the same type (produced by the same
-    primitive function, like 4 Gaussian), or different from each other
+    primitive function, like for Gaussian), or different from each other
     (e.g. a Gaussian plus a Moffat).
 
-    To do that, the multiprofile model function mp_func(x, a, grad,
-    deriv=) accepts as first positional argument X a complex object
+    To do that, the multiprofile model function mp_func(x, *a)
+    accepts as first positional argument X a complex object
     which has to be set-up using the helper function mp_setx. X
     contains in itself a description of the profile: the primitive
     functions to use, the number of instances of each type of
     primitive function, and, naturally, whatever X parameter each
     primitive function requires to function properly. You then call
-    lmfit with mp_func as its first argument and this complex X as its
+    curve_fit with mp_func as its first argument and this complex X as its
     second argument.
 
-   EXAMPLE
+   Example
+   -------
     For instance, assume you want to fit an observed Y, which seems to
     be well described as a sum of 3 Gaussian profiles. The usual
     process would require you to write a new function (e.g. gaussx3)
@@ -62,108 +53,114 @@ from scipy import optimize
     both the sum of 3 Gaussian profiles, and the corresponding
     gradient.
 
-    This is how you can do it with multiprofile.i (assuming x and y
+    This is how you can do it with multiprofile.py (assuming x and y
     are already known, and you have found a reasonable first guess a1,
     a2 and a3 for each of the 3 components).
 
-     #include "gauss.i"
-     #include "multiprofile.i"
-     MultiX=mp_setx(profile=gauss, realX=x, npar=3, ncomp=3)
-     a=_(a1, a2, a3)
-     result=mpfit(mp_func, MultiX, a, y, deriv=1)
+        from lineprofiles import gauss
+        from multiprofile import *
+        MultiX=mp_setx(profile=gauss, realX=x, npar=3, ncomp=3)
+        a=(a1, a2, a3)
+        result=mpfit(mp_func, MultiX, a, y)
 
     Now, assume you want to add a linear baseline to the three
     Gaussian profiles (note that linear() is provided by
-    multiprofile.i). You have "guessed" as l0 and l1 the two
+    multiprofile.py). You have "guessed" as l0 and l1 the two
     corresponding parameters:
 
-     linX=mp_setx(profile=linear, realX=x, npar=2)
-     MultiX=mp_setx(profile=gauss, realX=x, npar=3, ncomp=3, more=linX)
-     a=_(a1, a2, a3, [l0, l1])
-     result=mpfit(mp_func, MultiX, a, y, deriv=1)
+        linX=mp_setx(profile=linear, realX=x, npar=2)
+        MultiX=mp_setx(profile=gauss, realX=x, npar=3, ncomp=3, more=linX)
+        a=(a1, a2, a3, [l0, l1])
+        result=mpfit(mp_func, MultiX, a, y)
 
-   FUNCTIONS PROVIDED BY MULTIPROFILE.I
-    mp_func: the F parameter to lmfit when using multiprofile.i
-    mp_setx: helper function to set-up the complex model function
-    mp_getx: reverse from mp_setx
-    mp_seta: helper function to combine individual first guesses for
+   FUNCTIONS PROVIDED BY MULTIPROFILE.PY
+    mp_func : the F parameter to curve_fit when using multiprofile.i
+    mp_setx : helper function to set-up the complex model function
+    mp_getx : reverse from mp_setx
+    mp_seta : helper function to combine individual first guesses for
              each component into a first guess for the complex model
              function (use GET keyword fro the reverse)
-    linear : a*x+b, with lmfit-friendly calling sequence and
+    linear : a*x+b, with curve_fit-friendly calling sequence and
              derivatives
-    linear2d: a*x+b*y+c, with lmfit-friendly calling sequence and
+    linear2d : a*x+b*y+c, with curve_fit-friendly calling sequence and
              derivatives
     poly_lmfit  : same as poly() (compute 1D polynomials), with
-             lmfit-friendly calling sequence and derivatives.
+             curve_fit-friendly calling sequence and derivatives.
 
-    offsetlines: an lmfit-friendly function for fitting lines on a
+    offsetlines : an curve_fit-friendly function for fitting lines on a
              spectrum. It exemplifies advanced usage of multiprofile.
-    ol_setx: helper function akin to mp_setx, for use with
+    ol_setx : helper function akin to mp_setx, for use with
              offsetlines.
 
-   SEE ALSO: lmfit, mp_func, mp_setx, mp_getx, mp_seta, linear,
-             linear2d, poly_lmfit, gauss, gauss2d, moffat1d, moffat2d,
-             offsetlines, ol_setx
+   See Also
+   --------
+    lmfit, mp_func, mp_setx, mp_getx, mp_seta, linear,
+    linear2d, poly_lmfit, gauss, gauss2d, moffat1d, moffat2d,
+    offsetlines, ol_setx
 """
 
-#func mp_func(x,a,&grad,&comps,deriv=,returncomps=){
-def mp_func(x,*a):
+
+# func mp_func(x,a,&grad,&comps,deriv=,returncomps=){
+def mp_func(x, a):
+    """A general  purpose routine to easily create  multicomponents profiles.
+    The parameter scheme may  seem odd, but it is intended to  be easily used
+    with lmfit. See "multiprofile" for an introduction.
+
+    X : this parameter should be set using MP_SETX (which see). It
+        contains both the "real" independent variables and a
+        description of the model, split into several components.
+    A : vector of parameters. MP_SETA can be used to set it up. If base
+        profile needs NPAR parameters, MP_FUNC will transmit
+        A(NPAR*I+1:NPAR*(I+1)) to Ith instance of PROFILE. In case some
+        parameters must be equal for every components, give their index
+        in X (using mp_setx(equal=...)), and simply suppress this
+        parameter from the list of parameters for all components except
+        the first. For instance, if three components of parameters
+        [a1,b1,c1], [a2,b2,c2], and [a3,b3,c3] are to be adjusted with
+        the restriction that b1=b2=b3, A is of the form
+        A=[a1,b1,c1,a2,c2,a3,c3] and equal=[2] in the call to mp_setx.
+    GRAD : upon return, derivatives of output Y relative to each
+        parameter in A, if DERIV is set to non void an non null. Can be
+        used only if base profile function is able to compute derivatives.
+    DERIV : whether or not to compute derivatives.
+    COMPS : multiprofile can return the individual profiles of each
+        component in a 4th positional argument. Set RETURNCOMPS for
+        this to happen. COMPS(,C) is the C-th component.
+
+
+    Examples
+    --------
+
+    from lineprofiles import gauss
+    from multiprofile import *
+    axis = np.linspace(-10, 10, 101)
+    more = mp_setx(profile=linear, npar=2)
+    x = mp_setx(profile=gauss, npar=3, ncomp=2, realX=axis, more=more)
+    a=[10, -5, 2., 7, 4, 1.5, 100, 0.5]
+    y=mp_func(x,a)
+    plt.plot(y,axis)
+
+    See Also
+    --------
+    lmfit, multiprofile
     """
-     DOCUMENT mp_func(x,a,&grad,deriv=)
-
-	    A general  purpose routine to easily create  multicomponents profiles. The
-	    parameter scheme may  seem odd, but it is intended to  be easily used with
-	    lmfit. See "multiprofile" for an introduction.
-
-	    X: this parameter should be set using MP_SETX (which see). It
-	       contains both the "real" independent variables and a
-	       description of the model, split into several components.
-	    A: vector of parameters. MP_SETA can be used to set it up. If base
-	       profile needs NPAR parameters, MP_FUNC will transmit
-	       A(NPAR*I+1:NPAR*(I+1)) to Ith instance of PROFILE. In case some
-	       parameters must be equal for every components, give their index
-	       in X (using mp_setx(equal=...)), and simply suppress this
-	       parameter from the list of parameters for all components except
-	       the first. For instance, if three components of parameters
-	       [a1,b1,c1], [a2,b2,c2], and [a3,b3,c3] are to be adjusted with
-	       the restriction that b1=b2=b3, A is of the form
-	       A=[a1,b1,c1,a2,c2,a3,c3] and equal=[2] in the call to mp_setx.
-	    GRAD: upon return, derivatives of output Y relative to each
-	       parameter in A, if DERIV is set to non void an non null. Can be
-	       used only if base profile function is able to compute
-	       derivatives.
-	    DERIV: whether or not to compute derivatives.
-	    COMPS: multiprofile can return the individual profiles of each
-	       component in a 4th positional argument. Set RETURNCOMPS for
-	       this to happen. COMPS(,C) is the C-th component.
-	        TODO: python return more than one variable
-
-	   EXAMPLE:
-
-	    require,"gauss.i"
-	    require,"multiprofile.i"
-	    axis=span(-10,10,101)
-	    more=mp_setx(profile=linear,npar=2)
-	    x=mp_setx(profile=gauss,npar=3,ncomp=2,realX=axis,more=more)
-	    a=[10,-5,2.,7,4,1.5,100,0.5]
-	    y=mp_func(x,a)
-	    plg,y,axis
-
-	   SEE ALSO: lmfit, multiprofile
-	"""
-	#mp_getx call
-    #mp_getx, x, profile, realX, npar, ncomp, equal, more;
+    # TODO: python return more than one variable
+    # mp_getx call
+    # mp_getx, x, profile, realX, npar, ncomp, equal, more;
     # ie
-    profile=x[0]
-    realX=x[1]
-    npar=x[2]
-    ncomp=x[3]
-    equal=x[4]
-    more=x[5]
+
+    # profile=x[0]
+    # realX=x[1]
+    # npar=x[2]
+    # ncomp=x[3]
+    # equal=x[4]
+    # more=x[5]
+    profile, realX, npar, ncomp, equal, more = x
+    # profile, realX, npar, ncomp, equal, more = mp_getx(x)
 
     #profile = func set by mp_set
     print(f"a[0:npar] {a[0:npar]}")
-    y,gradc=profile(realX,*a[0:npar])
+    y,gradc=profile(realX,a[0:npar])
 
     #call jac
     #gradc=jac(realX,*a[0:npar])
@@ -307,22 +304,23 @@ def mp_setx (profile=None, npar=None, ncomp=None, realX=None, more=None, equal=N
 
 #TODO: do we need this func?
 #func mp_getx(x, &profile, &realX, &npar, &ncomp, &equal, &more) {
-"""
-/* DOCUMENT mp_getx, multiX, profile, realX, npar, ncomp, equal, more
+def mp_getx(x):
+    '''
+    /* DOCUMENT mp_getx, multiX, profile, realX, npar, ncomp, equal, more
 
-    Reverse from mp_setx: get information out of the complex lmfit "X"
-    parameter used with mp_func.
+        Reverse from mp_setx: get information out of the complex lmfit "X"
+        parameter used with mp_func.
 
-   SEE ALSO: mp_func, mp_seta, mp_setx, multiprofile
-*/
-"""
+        SEE ALSO: mp_func, mp_seta, mp_setx, multiprofile
+    */
+    '''
 #  profile=_car(x, 1); # _car(list,i) returns the i-th item of the list
 #  realX  =_car(x, 2);
 #  npar   =_car(x, 3);
 #  ncomp  =_car(x, 4);
 #  equal  =_car(x, 5);
 #  more   =_car(x, 6);
-
+    return x[0],x[1],x[2],x[3],x[4],x[5]
 #}
 
 
@@ -486,20 +484,26 @@ def poly_lmfit(x,a,deriv=None):
 
 # Fit doppler-shifted lines over a spectrum
 
-#func ol_setx(profile=, realX=, lines=, positivity=, intensities=, fixedratio=) {
-def ol_setx(profile=None, realX=None, lines=None, positivity=None, intensities=None, fixedratio=None):
-    """
-    DOCUMENT X=ol_setx(profile=profile, realX=, lines=, positivity=
+# TODO ol_setx doesn t touch to  realX=None, lines=None, positivity=None, !
+# func ol_setx(profile=, realX=, lines=, positivity=,
+# intensities=, fixedratio=) {
+def ol_setx(profile=None, realX=None, lines=None, positivity=None,
+            intensities=None, fixedratio=None):
+    '''Set up X parameter for offsetlines().
 
-    Set up X parameter for offsetlines().
+    Parameters
+    ----------
 
-    profile: model function for individual line (default: moffat1d);
-    realX  : independent variables used by PROFILE;
-    lines  : vector containing the list of lines;
+    profile :  model function for individual line (default: moffat1d)
+    realX  : independent variables used by PROFILE
+    lines  : vector containing the list of lines
     positivity : for each line, 1 if the line should be forced a
              positive amplitude (emission line), -1 for a negative
-             amplitude (absorption line).
-    intensities : relative intensities of the lines.
+             amplitude (absorption line)
+    intensities : relative intensities of the lines
+
+    Notes
+    -----
 
     The intensities of the lines can be unconstrained (default),
     constrained to be emission lines or absorption lines (POSITIVITY
@@ -509,50 +513,50 @@ def ol_setx(profile=None, realX=None, lines=None, positivity=None, intensities=N
     and INTENSITIES is not set, it defaults to array(1.,
     numberof(LINES)).
 
-    SEE ALSO: offsetlines
-    """
+    See Also:
+    offsetlines
+    '''
 
     if (profile is None):
-        #require, "moffat.i"; https://docs.astropy.org/en/stable/modeling/reference_api.html
-        #TODO
+        # see https://docs.astropy.org/en/stable/modeling/reference_api.html
+        # TODO
         from moffat import moffat1d
-        profile=moffat1d;
+        profile = moffat1d
 
     if (fixedratio is None):
-        #fixedratio=!is_void(intensities);
-        fixedratio= not intensities
+        # fixedratio=!is_void(intensities);
+        if intensities is None:
+            fixedratio = False
 
-    if (fixedratio and intensities is None) :
-        intensities=np.ones(len(lines))
+    if (fixedratio and intensities is None):
+        intensities = np.ones(len(lines))
 
-    #return _lst(profile, realX, lines, positivity, intensities, fixedratio);
-    print(f" ol_setx {(profile, realX, lines, positivity, intensities, fixedratio)}")
-    return (profile, realX, lines, positivity, intensities, fixedratio);
+    # return _lst(profile, realX, lines, positivity, intensities, fixedratio)
+    print(f" ol_setx {profile}")
+    print(f"{ realX, lines, positivity, intensities, fixedratio}")
+    return (profile, realX, lines, positivity, intensities, fixedratio)
 
 #func offsetlines(x,a,&grad,&comps,deriv=,returncomps=){
 def offsetlines(x,a,deriv=None,returncomps=None):
-    """
-    DOCUMENT offsetlines(x,a)
-
-    PURPOSE
-     Fit several lines of identical shape over a spectrum, sharing a
+    '''Fit several lines of identical shape over a spectrum, sharing a
      common displacement (for instance Doppler shift, if the
      wavelength range is short enough).
 
-    DESCRIPTION
      This function is suitable for call by lmfit. It returns a complex
      profile made of the sum of several lines (Moffat profiles, by
      default), which are moved only together (their relative distances
      remain unchanged). As long as the primitive profile is able to
      return derivatives, offsetlines does, too.
 
-    PARAMETERS
-     See ol_setx to better understand the parameters below.
-     X: the result of a call to ol_setx, which see. X contains
+    Parameters
+    ----------
+     X : np.array
+        the result of a call to ol_setx, which see. X contains
         information on the lines to fit and the type of profile to use
         (Moffat by default). X also contains the wavelengths or
         frequencies.
-     A: the vector of parameters to fit. If ol_setx() has been called
+     A : np.array
+        the vector of parameters to fit. If ol_setx() has been called
         with INTENSITIES set and FIXEDRATIO either not set or set to
         1, A(1) is the multiplicative coefficient by which to multiply
         each of these individual relative intensities. In all other
@@ -565,11 +569,11 @@ def offsetlines(x,a,deriv=None,returncomps=None):
         two parameters for the line shape (line width and beta; see
         moffat1d()).
 
-     EXAMPLE
+     Examples
+     --------
 
       // Basic set-up
-      x = span(2.0, 2.4, 200);        // set up wavelength (or
-                                      // frequency) vector
+      x = span(2.0, 2.4, 200)  // set up wavelength (or frequency) vector
 
       lines=[2.058, 2.15, 2.16, 2.3]; // give rest wavelength or
                                       // frequency of each line
@@ -599,8 +603,10 @@ def offsetlines(x,a,deriv=None,returncomps=None):
       fma; plg, y_obs, x;
       plg, offsetlines(olx, A), x, color="red";
 
-      SEE ALSO: ol_setx, lmfit, multiprofile, moffat1d.
-    """
+      See Also
+      --------
+      ol_setx, lmfit, multiprofile, moffat1d.
+    '''
 
     profile     = x[0]
     realX       = x[1]
@@ -671,61 +677,53 @@ def offsetlines(x,a,deriv=None,returncomps=None):
     return sp, grad
 
 
-
 def test_offsetlines():
-    plt.figure()
-    # s1 = Moffat1D()
-    # s1.amplitude = factor
-    # s1.width = factor
-    # s1.x_0 = lines[0]
-    # plt.plot(r, s1(r), color=str(0.25 * factor), lw=2)
-
     # Basic set-up
 
-    #set up wavelength (or frequency) vector
+    # set up wavelength (or frequency) vector
     x = np.linspace(2.0, 2.4, 200)
 
     # give rest wavelength or frequency of each line
-    lines=np.array([2.058, 2.15, 2.16, 2.3])
+    lines = np.array([2.058, 2.15, 2.16, 2.3])
 
     # Prepare spectrum
     print("Prepare spectrum call ol_setx")
-    olx=ol_setx(realX=x, lines=lines)
+    olx = ol_setx(realX=x, lines=lines)
     print(f"olx {olx}")
 
     # individual intensities  displacement, width, beta
-    A=np.array([ 1, 0.5, 0.6, 1.2,  0.02, 0.005, 1.1])
+    A = np.array([1, 0.5, 0.6, 1.2,  0.02, 0.005, 1.1])
 
     print("call offsetlines")
-    y=offsetlines(olx, A)
-    #plg, y, x;
+    y = offsetlines(olx, A)
+    # plg, y, x;
 
     # Fit with free intensities
     print("Fit with free intensities")
     # y_obs= y+0.2*random_n(dimsof(y))
-    y_obs= y+0.2*np.random.normal(0, 1, y.shape)
-    #res=lmfit(offsetlines, olx, A, y_obs,deriv=1)
-    res,req=optimize.curve_fit(offsetlines, olx, A, y_obs)
-    #resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
+    y_obs = y+0.2*np.random.normal(0, 1, y.shape)
+    # res=lmfit(offsetlines, olx, A, y_obs,deriv=1)
+    res, req = optimize.curve_fit(offsetlines, olx, A, y_obs)
+    # resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
     #                                            jac=curve_fit_func.jac)
-    #fma; plg, y_obs, x
-    #plg, offsetlines(olx, A), x, color="red";
+    # fma; plg, y_obs, x
+    # plg, offsetlines(olx, A), x, color="red";
 
-    #Prepare spectrum, setting INTENSITIES in ol_setx
-    olx=ol_setx(realX=x, lines=lines, intensities=[1., 0.5, 0.6, 1.2]);
-    A=[1., 0.02, 0.005, 1.1];
-    y=offsetlines(olx, A);
+    # Prepare spectrum, setting INTENSITIES in ol_setx
+    olx = ol_setx(realX=x, lines=lines, intensities=[1., 0.5, 0.6, 1.2])
+    A = [1., 0.02, 0.005, 1.1]
+    y = offsetlines(olx, A)
 
-    #fma; plg, y, x;
+    # fma; plg, y, x;
 
     # Fit with tied intensities
-    y_obs= y+0.2*np.random.standard_normal(y.shape)
-    #res=lmfit(offsetlines, olx, A, y_obs, deriv=1);
-    resopt,reqcov=optimize.curve_fit(offsetlines, olx, A, y_obs)
-    #fma; plg, y_obs, x;
-    #plg, offsetlines(olx, A), x, color="red";
-
+    y_obs = y+0.2*np.random.standard_normal(y.shape)
+    # res=lmfit(offsetlines, olx, A, y_obs, deriv=1);
+    resopt, reqcov = optimize.curve_fit(offsetlines, olx, A, y_obs)
+    # fma; plg, y_obs, x;
+    plt.figure()
+    plt.plot(offsetlines(olx, A), x)
+    plt.show()
 
 if __name__ == '__main__':
     test_offsetlines()
-
