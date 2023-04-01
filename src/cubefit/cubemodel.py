@@ -935,7 +935,6 @@ class CubeModel:
             print(f"nx  {nx}")
             for k in range(nx):
                 x[:,:, k] /= self.pscale[k]
-                print(f"x[49,49,:]{x[49,49,]}")
 
             if self.dbg:
                 print("in2 poffset")

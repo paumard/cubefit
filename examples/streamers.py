@@ -15,7 +15,7 @@ OK for SNR>1 and does not work for SNR<=1.
 import numpy as np
 from matplotlib import pyplot as plt
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel
+from cubefit.cubemodel import CubeModel, markov
 from cubefit.lineprofiles import gauss, ngauss
 
 DEBUG=True
@@ -39,13 +39,19 @@ def add_noise(cube, sigma=0.02):
 
 # Shape of data cube (nx, ny, nz)
 nx, ny, nz = 16, 16, 21
+# Cube with x(=alpha) and y(=delta) coordinate of each data point
 alpha=np.linspace(-ny/2, ny/2, ny)[np.newaxis, :]*np.ones((nx, ny))
 delta=np.linspace(-nx/2, nx/2, nx)[:, np.newaxis]*np.ones((nx, ny))
+# Build "true" parameter maps
+# internsity map
 I=gauss(alpha+delta, 1, 0, 10)[0] \
     * (  gauss(alpha-delta, 1, 4, 2)[0]
        + gauss(alpha-delta, 0.25, -4, 2)[0])
+# velocity map
 v=2*(alpha+delta)
+# width map
 dv=(2-I)*5
+# display maps if DEBUG is True
 if DEBUG:
     plt.imshow(I)
     plt.title("'True' flux")
@@ -63,16 +69,20 @@ dw=5e-11
 Dw=dw*(nz-1)
 profile = DopplerLines(w0, profile=ngauss)
 waxis = np.linspace(w0-Dw/2, w0+Dw/2, nz)
-model = CubeModel(profile=profile, profile_xdata=waxis, regularisation=None)
+model_none = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
+model_markov = CubeModel(profile=profile, profile_xdata=waxis, regularization=markov)
 vaxis = (waxis-w0)/w0*profile.light_speed
 
 # Parameters for "true" cube. Can be 1D or 3D.
 xreal=np.transpose(np.asarray([I, v, dv]), (1, 2, 0))
-reality=model.model(xreal)
+reality=model_none.model(xreal)
 
 # Sigma of errors to add to "true" cube to get "observational" data
 sigma = 0.2*np.max(reality)
-model.data = add_noise(reality, sigma)
+data = add_noise(reality, sigma)
+
+model_none.data = data
+model_markov.data = data
 
 # Initial guess for fit. Can be 1D or 3D.
 xtest_1d=[np.max(I), 0., np.std(v)]
@@ -80,34 +90,30 @@ xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
 
 if DEBUG:
     plt.plot((waxis-w0)/w0*profile.light_speed, reality[6,10, :], label="bright spectrum (true)")
-    plt.plot((waxis-w0)/w0*profile.light_speed, model.data[6,10,:], label="bright spectrum (data)")
+    plt.plot((waxis-w0)/w0*profile.light_speed, data[6,10,:], label="bright spectrum (data)")
     plt.plot((waxis-w0)/w0*profile.light_speed, reality[10,6,:], label="faint spectrum (true)")
-    plt.plot((waxis-w0)/w0*profile.light_speed, model.data[10,6,:], label="faint spectrum (data)")
+    plt.plot((waxis-w0)/w0*profile.light_speed, data[10,6,:], label="faint spectrum (data)")
     plt.plot((waxis-w0)/w0*profile.light_speed, profile(waxis, *xtest_1d)[0], label="first guess")
     plt.plot((waxis-w0)/w0*profile.light_speed, np.sum(np.sum(reality, axis=1), axis=0)/nx,
              label=f"integral spectrum/{nx}")
     plt.legend()
     plt.show()
 
-# Sigma of errors to add to "true" cube to get "observational" data
-sigma = 0.2*np.max(reality)
-model.data = add_noise(reality, sigma)
-
 # Do fit
-res_x, fx, gx, status = model.fit(xtest)
+res_x_none, fx_none, gx_none, status_none = model_none.fit(xtest)
 
 
 # Compute model cube
-model_cube=model.model(res_x)
+model_none_cube=model_none.model(res_x_none)
 
-chi2=np.sum(((model.data-model_cube)/sigma)**2)/(model.data.size-res_x.size)
-                  
+chi2=np.sum(((data-model_none_cube)/sigma)**2)/(data.size-res_x_none.size)
+        
 print(f"reduced chi2 == {chi2}")
 
 def plot3(i, j):
     plt.plot(vaxis, reality[i, j, :], label=f"true spectrum at {j} {i}")
-    plt.plot(vaxis, model.data[i, j, :], label=f"data spectrum at {j} {i}")
-    plt.plot(vaxis, model_cube[i, j, :], label=f"fitted spectrum at {j} {i}")
+    plt.plot(vaxis, data[i, j, :], label=f"data spectrum at {j} {i}")
+    plt.plot(vaxis, model_none_cube[i, j, :], label=f"fitted spectrum at {j} {i}")
     plt.legend()
     plt.show()
 
@@ -118,21 +124,49 @@ if DEBUG:
     plot3(10, 6)
 
 # Display intensity map
-plt.imshow(res_x[:,:,0])
+plt.imshow(res_x_none[:,:,0])
 plt.title("fitted flux")
 plt.show()
 
 # Display velocity map
-plt.imshow(res_x[:,:,1])
+plt.imshow(res_x_none[:,:,1])
 plt.title("fitted velocity")
 plt.show()
 
 # Display width map
-plt.imshow(res_x[:,:,2])
+plt.imshow(res_x_none[:,:,2])
 plt.title("fitted width")
 plt.show()
 
 # Display SNR map (peak/sigma)
 plt.imshow(np.max(reality, axis=2)>sigma)
 plt.title("Where true peak value > noise level")
+plt.show()
+
+# Do fit with regularization
+model_markov.delta=np.asarray([1e-4, 1e-4, 1e-4])
+model_markov.scale=np.asarray([1e-22, 1e-21, 1e-21])
+res_x_markov, fx_markov, gx_markov, status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
+
+
+# Compute model cube
+model_markov_cube=model_markov.model(res_x_markov)
+
+chi2=np.sum(((data-model_markov_cube)/sigma)**2)/(data.size-res_x_markov.size)
+                  
+print(f"reduced chi2 == {chi2}")
+
+# Display intensity map
+plt.imshow(res_x_markov[:,:,0], vmin=-0.2, vmax=1.2)
+plt.title("fitted flux")
+plt.show()
+
+# Display velocity map
+plt.imshow(res_x_markov[:,:,1], vmin=-16, vmax=16)
+plt.title("fitted velocity")
+plt.show()
+
+# Display width map
+plt.imshow(res_x_markov[:,:,2])
+plt.title("fitted width")
 plt.show()
