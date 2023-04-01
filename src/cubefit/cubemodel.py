@@ -99,8 +99,8 @@ def markov(x, scale=None, delta=None):
     # dy = (object-roll(object,[0, 1])) / (delta * scale)
 
     # TODO index should be [0,-1] ?
-    dx = (x - np.roll(x, [1, 0])) / (delta * scale)
-    dy = (x - np.roll(x, [0, 1])) / (delta * scale)
+    dx = (x - np.roll(x, 1, axis=1)) / (delta * scale)
+    dy = (x - np.roll(x, 1, axis=0)) / (delta * scale)
 
     # map is a python reserved keyword
     amap = np.abs(dx) - np.log(1. + np.abs(dx)) + \
@@ -117,7 +117,8 @@ def markov(x, scale=None, delta=None):
 
     # TODO reimplement the true gradient
     # roll
-    grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
+    grad_obj = (  dx - np.roll(dx, -1, axis=1) \
+                + dy - np.roll(dy, -1, axis=0)) * \
                (delta / scale)
 
     # print (f"crit {crit}")
@@ -154,8 +155,8 @@ def l1l2(x, scale=None, delta=None):
 
     # TODO object-roll ?
     # realise un shift
-    dx = (x - np.roll(x, [1, 0])) / (delta * scale)
-    dy = (x - np.roll(x, [0, 1])) / (delta * scale)
+    dx = (x - np.roll(x, 1, axis=1)) / (delta * scale)
+    dy = (x - np.roll(x, 1, axis=0)) / (delta * scale)
 
     r = np.sqrt(dx**2 + dy**2)
 
@@ -173,7 +174,8 @@ def l1l2(x, scale=None, delta=None):
     # TODO reimplement the true gradient
     # TODO dx-roll is that ok (x - roll) en place de object-roll
     # ou est ce object - roll ?
-    grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
+    grad_obj = (  dx - np.roll(dx, -1, axis=1) \
+                + dy - np.roll(dy, -1, axis=0)) * \
                (delta / scale)
 
     return crit, grad_obj
@@ -1040,116 +1042,6 @@ class CubeModel:
         # TODO
         # extra,view, x
         print("TODO op_viewer")
-
-
-# TODO return tuple virer grad_obj
-def markov(x, scale=None, delta=None):
-    """
-    DOCUMENT cubefit.markov(object,grad_object[,scale=,delta=])
-
-    delta^2 . sum [|dx|/delta -ln(1+|dx|/delta) + |dy|/delta -ln(1+|dy|/delta)]
-    where |dx| (m,n) = (o(m,n)-o(m-1,n))/scale is the x component of the
-    object gradient normalized by scale.
-
-    KEYWORDS :
-    scale : Scale factor applied to Do (default value is 1)
-    delta : Threshold on the gradient for switching between linear and
-    quadratic behavour. When delta tends to infinity, the criterion
-    becomes purely quadratic.
-
-    AUTHOR: Damien Gratadour, borrowed from Yoda.
-    */
-    """
-    # print("DBG inside markov")
-    # TODO scale et delta already in self
-    if (scale is None):
-        scale = 1.
-    if (delta is None):
-        delta = 1.
-
-    # TODO object-roll?
-    # dx = (object-roll(object,[1, 0])) / (delta * scale)
-    # dy = (object-roll(object,[0, 1])) / (delta * scale)
-
-    # TODO index should be [0,-1] ?
-    dx = (x - np.roll(x, [1, 0])) / (delta * scale)
-    dy = (x - np.roll(x, [0, 1])) / (delta * scale)
-
-    # map is a python reserved keyword
-    amap = np.abs(dx) - np.log(1. + np.abs(dx)) + \
-        np.abs(dy) - np.log(1. + np.abs(dy))
-
-    # TODO integrate returnmap with self.dbg
-    # if (returnmap):
-    #    return (delta**2) * amap
-
-    crit = (delta**2) * np.sum(amap)
-
-    dx /= (1. + abs(dx))
-    dy /= (1. + abs(dy))
-
-    # TODO reimplement the true gradient
-    # roll
-    grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
-               (delta / scale)
-
-    # print (f"crit {crit}")
-    # print (f"crit.shape {crit.shape}")
-    # print (f"grad_obj {grad_obj}")
-    # print (f"grad_obj.shape {grad_obj.shape}")
-
-    return crit, grad_obj
-
-# voir si fonction de module plutot que de class satic
-def l1l2(x, scale=None, delta=None):
-    """
-    DOCUMENT cubefit.l1l2(object,grad_object[,scale=,delta=])
-    delta^2 . sum [|dx|/delta -ln(1+|dx|/delta)+ |dy|/delta -ln(1+|dy|/delta)]
-    where |dx| (m,n) = [o(m,n)-o(m-1,n)]/scale
-    is the x component of the  object gradient normalized by scale.
-
-    KEYWORDS :
-    scale : Scale factor applied to Do (default value is 1)
-    delta : Threshold on the gradient for switching between linear
-    and quadratic behavour. When delta tends to infinity,
-    the criterion becomes purely quadratic.
-
-    AUTHOR: Damien Gratadour, borrowed from Yoda.
-    """
-    # print("DBG inside l1l2")
-    # if (!is_set(scale)) scale = 1.
-    # if (!is_set(delta)) delta = 1.
-    # TODO scale et delta already in self
-    if (scale is None):
-        scale = 1.
-    if (delta is None):
-        delta = 1.
-
-    # TODO object-roll ?
-    # realise un shift
-    dx = (x - np.roll(x, [1, 0])) / (delta * scale)
-    dy = (x - np.roll(x, [0, 1])) / (delta * scale)
-
-    r = np.sqrt(dx**2 + dy**2)
-
-    # map is a reserved python keyword
-    amap = r - np.log(1.+r)
-
-    #if (returnmap):
-    #    return (delta**2) * amap
-
-    crit = (delta**2) * np.sum(amap)
-
-    dx /= (1. + r)
-    dy /= (1. + r)
-
-    # TODO reimplement the true gradient
-    # TODO dx-roll is that ok (x - roll) en place de object-roll
-    # ou est ce object - roll ?
-    grad_obj = (dx - np.roll(dx, [-1, 0]) + dy - np.roll(dy, [0, -1])) * \
-               (delta / scale)
-
-    return crit, grad_obj
 
 def corr(xy, *grad, deriv=None):
     """

@@ -8,14 +8,16 @@ line flux.
 This script create then fits fake data.
 
 The conclusion is that, in the absence of regularization, the fit is
-OK for SNR>1 and does not work for SNR<=1.
+OK for SNR>1 and does not work for SNR<=1, whereas it is good with
+regularization until SNR~0.5 on this example with very crude initial
+guess.
 """
 
 
 import numpy as np
 from matplotlib import pyplot as plt
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel, markov
+from cubefit.cubemodel import CubeModel, markov, l1l2
 from cubefit.lineprofiles import gauss, ngauss
 
 DEBUG=True
@@ -70,7 +72,6 @@ Dw=dw*(nz-1)
 profile = DopplerLines(w0, profile=ngauss)
 waxis = np.linspace(w0-Dw/2, w0+Dw/2, nz)
 model_none = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
-model_markov = CubeModel(profile=profile, profile_xdata=waxis, regularization=markov)
 vaxis = (waxis-w0)/w0*profile.light_speed
 
 # Parameters for "true" cube. Can be 1D or 3D.
@@ -82,7 +83,6 @@ sigma = 0.2*np.max(reality)
 data = add_noise(reality, sigma)
 
 model_none.data = data
-model_markov.data = data
 
 # Initial guess for fit. Can be 1D or 3D.
 xtest_1d=[np.max(I), 0., np.std(v)]
@@ -107,7 +107,6 @@ res_x_none, fx_none, gx_none, status_none = model_none.fit(xtest)
 model_none_cube=model_none.model(res_x_none)
 
 chi2=np.sum(((data-model_none_cube)/sigma)**2)/(data.size-res_x_none.size)
-        
 print(f"reduced chi2 == {chi2}")
 
 def plot3(i, j):
@@ -125,27 +124,27 @@ if DEBUG:
 
 # Display intensity map
 plt.imshow(res_x_none[:,:,0])
+plt.contour(np.max(reality, axis=2)/sigma, [1])
 plt.title("fitted flux")
 plt.show()
 
 # Display velocity map
 plt.imshow(res_x_none[:,:,1])
+plt.contour(np.max(reality, axis=2)/sigma, [1])
 plt.title("fitted velocity")
 plt.show()
 
 # Display width map
 plt.imshow(res_x_none[:,:,2])
+plt.contour(np.max(reality, axis=2)/sigma, [1])
 plt.title("fitted width")
 plt.show()
 
-# Display SNR map (peak/sigma)
-plt.imshow(np.max(reality, axis=2)>sigma)
-plt.title("Where true peak value > noise level")
-plt.show()
-
 # Do fit with regularization
+model_markov = CubeModel(profile=profile, profile_xdata=waxis, regularization=markov)
+model_markov.data = data
 model_markov.delta=np.asarray([1e-4, 1e-4, 1e-4])
-model_markov.scale=np.asarray([1e-22, 1e-21, 1e-21])
+model_markov.scale=np.asarray([1e-23, 1e-21, 1e-21])
 res_x_markov, fx_markov, gx_markov, status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
 
 
@@ -153,20 +152,54 @@ res_x_markov, fx_markov, gx_markov, status_markov = model_markov.fit(xtest, ftol
 model_markov_cube=model_markov.model(res_x_markov)
 
 chi2=np.sum(((data-model_markov_cube)/sigma)**2)/(data.size-res_x_markov.size)
-                  
 print(f"reduced chi2 == {chi2}")
 
 # Display intensity map
 plt.imshow(res_x_markov[:,:,0], vmin=-0.2, vmax=1.2)
+plt.contour(np.max(reality, axis=2)/sigma, [0.5])
 plt.title("fitted flux")
 plt.show()
 
 # Display velocity map
 plt.imshow(res_x_markov[:,:,1], vmin=-16, vmax=16)
+plt.contour(np.max(reality, axis=2)/sigma, [0.5])
 plt.title("fitted velocity")
 plt.show()
 
 # Display width map
 plt.imshow(res_x_markov[:,:,2])
+plt.contour(np.max(reality, axis=2)/sigma, [0.5])
+plt.title("fitted width")
+plt.show()
+
+# Do fit with regularization
+model_l1l2 = CubeModel(profile=profile, profile_xdata=waxis, regularization=l1l2)
+model_l1l2.data = data
+model_l1l2.delta=np.asarray([1e-4, 1e-4, 1e-4])
+model_l1l2.scale=np.asarray([1e-23, 1e-21, 1e-21])
+res_x_l1l2, fx_l1l2, gx_l1l2, status_l1l2 = model_l1l2.fit(xtest, ftol=1e-10, xtol=1e-8)
+
+
+# Compute model cube
+model_l1l2_cube=model_l1l2.model(res_x_l1l2)
+
+chi2=np.sum(((data-model_l1l2_cube)/sigma)**2)/(data.size-res_x_l1l2.size)
+print(f"reduced chi2 == {chi2}")
+
+# Display intensity map
+plt.imshow(res_x_l1l2[:,:,0], vmin=-0.2, vmax=1.2)
+plt.contour(np.max(reality, axis=2)/sigma, [0.5])
+plt.title("fitted flux")
+plt.show()
+
+# Display velocity map
+plt.imshow(res_x_l1l2[:,:,1], vmin=-16, vmax=16)
+plt.contour(np.max(reality, axis=2)/sigma, [0.5])
+plt.title("fitted velocity")
+plt.show()
+
+# Display width map
+plt.imshow(res_x_l1l2[:,:,2])
+plt.contour(np.max(reality, axis=2)/sigma, [0.5])
 plt.title("fitted width")
 plt.show()
