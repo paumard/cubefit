@@ -664,7 +664,7 @@ class CubeModel:
 
                     res += sum(atom**2)
                     # yorick line gx(i,j,) += (grad * atom(,-))(sum,) *2.;
-                    gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ]), axis=0) * 2.
+                    gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ] * self.weight[i, j, :][:, np.newaxis]), axis=0) * 2.
         # //  window,34
         # //  plg, tot
 
@@ -1608,6 +1608,46 @@ def numerical_gradient3(f, x, epsilon=1e-6):
                 g[i, j, k] = (f(temp)-f0)/epsilon
     return g
 
+class RegularizationWithNumericalGradient:
+    '''Wrapper around a regularization function to provide numerical gradient
+
+    Meant for debugging or prototyping. Gradient should be estimated
+    analitycally whenever possible.
+
+    '''
+
+    def __init__(self, func, epsilon=1e-6):
+        self.func=func
+        self.epsilon=epsilon
+
+    def __call__(self, x, scale=None, delta=None):
+
+        # ensure x is an array and we will not modify the input array
+        x=np.copy(x)
+
+        shape=x.shape
+
+        f0=self.func(x, scale, delta)
+        if type(f0) is tuple:
+            f0=f0[0]
+
+        g=np.zeros(shape)
+
+        for j in range(shape[1]):
+            for i in range(shape[0]):
+                val = x[j, i]
+                x[j, i] = val + 0.5*self.epsilon
+                fplus=self.func(x, scale, delta)
+                if type(fplus) is tuple:
+                    fplus=fplus[0]
+                x[j, i] = val - 0.5*self.epsilon
+                fminus=self.func(x, scale, delta)
+                if type(fminus) is tuple:
+                    fminus=fminus[0]
+                x[j, i] = val
+                g[j, i] = (fplus-fminus)/self.epsilon
+
+        return f0, g
 
 if __name__ == '__main__':
     testpourgauss = 0
