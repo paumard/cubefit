@@ -69,7 +69,7 @@ For instance the checklists below follow this syntax:
             result, coherently with expectations, including gradient
             estimate;
    1. [ ] Implement and check regularization in CubeModel.eval():
-      - [ ] Reactivate lines of code in eval() that add the
+      - [x] Reactivate lines of code in eval() that add the
             regularization term; run the test suite to validate that
             the behavior of eval() with self.regularisation set to
             None is unchanged;
@@ -81,7 +81,7 @@ For instance the checklists below follow this syntax:
         - [ ] Gradient is still correctly estimated (compare with
               numerical estimate).
    1. [ ] Check that fitting work!
-      - [ ] Expand examples/streamers.py to perform a second fit with
+      - [x] Expand examples/streamers.py to perform a second fit with
             regularisation activated (try both l1l2 and markov. Try to
             find a good set of hyper-parameters (scale and delta) so
             that the velocity map is recovered for the full field
