@@ -64,22 +64,24 @@ def moffat1d(x, *a):
     __moffat_vmax = None
     __moffat_gradmax = None
     a = np.asarray(a)
-    print("DBG CALL moffat1d")
-    print(f"a {a}")
+    # print("DBG CALL moffat1d")
+    # print(f"a {a}")
     # global __moffat_betamax, __moffat_vmax, __moffat_gradmax
     if __moffat_gradmax is None:
         __moffat_gradmax = 1e150
-    if __moffat_betamax:
+    if __moffat_betamax is not None:
         big = __moffat_betamax
     else:
         big = 1e18
 
     a = np.asarray(a)
-    print(f"a asarray {a}")
-    nterms = len(a)
+    x = np.asarray(x)
+    # print(f"a asarray {a}")
+    # nterms = len(a)
+    nterms = a.size
     if __moffat_vmax:
         if abs(a[1]) > __moffat_vmax:
-            grad = np.zeros((len(x), nterms))
+            grad = np.zeros((x.size, nterms))
             return np.zeros_like(x)
     small = 1e-80
     if a[2] < small:
@@ -88,7 +90,7 @@ def moffat1d(x, *a):
     ind = np.where(abs(u2) > __moffat_gradmax)
     if len(ind[0]) > 0:
         u2[ind] = np.sign(u2[ind]) * __moffat_gradmax
-        print("*** Warning: MOFFAT caught overflows.")
+        print("*** 1 Warning: MOFFAT caught overflows.")
     u4 = u2 ** 2
     u3 = 1 + u4
     if abs(a[3]) > big:
@@ -106,24 +108,30 @@ def moffat1d(x, *a):
         res += a[4]
     if nterms == 6:
         res += a[5] * x
-
-    grad = np.zeros((len(x), nterms))
+    # TODO freestyle
+    tb=(x >= a[1])
+    grad = np.zeros((x.size, nterms))
     grad[:, 0] = u1
     if np.max(u1b):
         grad[:, 1] = 2 * a[0] * a[3] * u2 / a[2] * u1b
     if np.max(u1b):
         grad[:, 2] = 2 * a[0] * a[3] * u4 / a[2] * u1b
     grad[:, 3] = -a[0] * np.log(u3) * u1
+    #if nterms > 4:
+    #    grad[:, 4] = 0
+    # TODO freestyle
+    if np.max(u1b):
+        grad[:, 4] =  2 * a[0] * (a[3] * u4 / a[4] * u1b * tb)
     if nterms == 6:
         grad[:, 5] = x
     ind1 = np.where(grad > __moffat_gradmax)
     if len(ind1[0]) > 0:
         grad[ind1] = __moffat_gradmax
-        print("*** Warning: MOFFAT caught overflows.")
+        print("*** 2 Warning: MOFFAT caught overflows.")
     ind2 = np.where(grad < -__moffat_gradmax)
     if len(ind2[0]) > 0:
         grad[ind2] = -__moffat_gradmax
-        print("*** Warning: MOFFAT caught overflows.")
+        print("*** 3 Warning: MOFFAT caught overflows.")
     ind3 = np.where(abs(grad) < 1 / __moffat_gradmax)
     if len(ind3[0]) > 0:
         grad[ind3] = 0
@@ -156,7 +164,13 @@ def asmoffat1d(x, *a):
     moffat1d, moffat1d_fit, asmoffat1d_fit
     '''
 # from chatgpt
+    # print("DBG call asmoffat1d")
+    # print(f"a is {a}")
     a = np.asarray(a)
+    a = np.promote_types(a.dtype, np.float64).type(a)
+    x = np.asarray(x)
+    x = np.promote_types(x.dtype, np.float64).type(x)
+
     __moffat_betamax = np.inf
     __moffat_vmax = np.inf
     __moffat_gradmax = 1e150
@@ -164,7 +178,7 @@ def asmoffat1d(x, *a):
         big = __moffat_betamax
     else:
         big = 1e18
-    nterms = len(a)
+    nterms = a.size
     if __moffat_vmax and np.abs(a[1]) > __moffat_vmax:
         grad = np.zeros((x.size, nterms))
         return np.zeros_like(x)
@@ -193,6 +207,7 @@ def asmoffat1d(x, *a):
     else:
         u1a = u3a ** -np.abs(a[3])
         u1ab = u3a ** (-abs(a[3]) - 1)
+    # print(f"a is {a}")
     if np.abs(a[5]) > big:
         u1b = np.zeros_like(x)
         u1bb = u1b
@@ -228,35 +243,35 @@ def asmoffat1d(x, *a):
     if (nterms == 8):
         grad[:, 7] = x
     # try to avoid overflows in curve_fit.
-    ind1 = np.where(grad > __moffat_gradmax)[0]
+    ind1 = np.where(grad > __moffat_gradmax)
     if (np.size(ind1) > 0):
         grad[ind1] = __moffat_gradmax
-        print("MOFFAT warning: grad overflows caught, grad is inaccurate.")
+        print("ASMOFFAT warning: grad overflows caught, grad is inaccurate.")
 
-    ind2 = np.where(grad < -__moffat_gradmax)[0]
+    ind2 = np.where(grad < -__moffat_gradmax)
     if (np.size(ind2) > 0):
         grad[ind2] = -__moffat_gradmax
-        print("MOFFAT warning: grad overflows caught, grad is inaccurate.")
+        print("ASMOFFAT warning: grad overflows caught, grad is inaccurate.")
     # try to avoid underflows in curve_fit.
-    ind3 = np.where(np.abs(grad) < 1/__moffat_gradmax)[0]
+    ind3 = np.where(np.abs(grad) < 1/__moffat_gradmax)
     if (np.size(ind3) > 0):
         grad[ind3] = 0
-        print("MOFFAT warning: grad underflows caught, grad is inaccurate.")
+        print("ASMOFFAT warning: grad underflows caught, grad is inaccurate.")
     return res, grad
 
 
 def moffat1d_fit(y, x, w, guess=None, nterms=None, itmax=None):
-    '''Fits  a  moffat (see  moffat1d)  profile  on a  data  set  using
-    curve_fit  (see curve_fit).
+    '''Fits a moffat (see  moffat1d) profile on a data set using
+    curve_fit (see curve_fit).
 
-    The set  of  data points  Y  is the  only mandatory argument, X defaults
+    The set of data points Y is the only mandatory argument, X defaults
     to indgen(numberof(y)), weights W are optional (see curve_fit).
     MOFFAT1D_FIT tries to guess a set of initial parameters, but you can
-    (and  should  in every  non-trivial  case)  provide  one using  the
-    GUESS keyword. In  case you don't  provide a guess,  you should set NTERMS
-    to 4 (simple  moffat),  5  (adjust  constant  baseline)
-    or  6  (adjust  linear baseline). The returned  fitted parameters have
-    the same  format as GUESS, see moffat1d.
+    (and should in every  non-trivial case) provide one using the
+    GUESS keyword. In  case you don't provide a guess, you should set NTERMS
+    to 4 (simple moffat), 5 (adjust constant baseline)
+    or 6 (adjust linear baseline). The returned fitted parameters have
+    the same format as GUESS, see moffat1d.
 
     See Also
     --------
@@ -535,39 +550,43 @@ class WrapToCurveFit:
 
 
 def test_moffat():
-
+    plot = 1
     # test moffat1d
     a = np.array([1, 1, 0.5, 0.5, 0.1])
     x = np.linspace(-10, 10, 3000)
     # print(x)
     ret, ret_jac = moffat1d(x, *a)
     # ret_jac = gauss_jac(x, *a)
-    plt.figure()
-    plt.xlim(-10, 10)
-    plt.plot(x, ret)
-    plt.figure()
-    plt.plot(x, ret_jac)
-    plt.show()
+    if plot:
+        plt.figure()
+        plt.xlim(-10, 10)
+        plt.plot(x, ret)
+        plt.figure()
+        plt.plot(x, ret_jac)
+        plt.show()
 
     sigma = 0.02
     y = ret + np.random.standard_normal(ret.size) * sigma
 
     # TODO add test of the gradient with a optimize.curve_fit
     print("===FIT grad ==========")
-    a0 = np.array([1.5, 0.4, 2., 5., 1.5])
+    a0 = np.array([1.5, 0.4, 1., 0.2, 0.5])
 
     # wrap moffat1d in a way suitable for curve_fit
     curve_fit_func = WrapToCurveFit(moffat1d)
 
     resopt, reqcov = optimize.curve_fit(curve_fit_func, x, y, p0=a0)
+    print("uhUH")
     resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, x, y, p0=a0,
                                                 jac=curve_fit_func.jac)
 
+    print("uh2UH2")
     model = moffat1d(x, *resopt)[0]
     model_jac = moffat1d(x, *resopt_jac)[0]
     chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
     chi2_jac = np.sum(((y-model_jac)/sigma)**2)/(y.size-a.size+1)
 
+    print(f"a initial {a}")
     print("=======chi2")
     print(f"chi2 reduit {chi2}")
     print(f"chi2_jac reduit {chi2_jac}")
@@ -575,13 +594,14 @@ def test_moffat():
     print(f"resopt {resopt}")
     print(f"resopt_jac {resopt_jac}")
 
-    plt.figure()
-    # plt.plot(waxis, dop(*a0))
-    plt.plot(x, model, label="model")
-    plt.plot(x, model_jac, label="model_jac")
-    plt.plot(x, y, label="y")
-    plt.legend()
-    plt.show()
+    if plot:
+        plt.figure()
+        # plt.plot(waxis, dop(*a0))
+        plt.plot(x, model, label="model")
+        plt.plot(x, model_jac, label="model_jac")
+        plt.plot(x, y, label="y")
+        plt.legend()
+        plt.show()
 
     # test asmoffat1d
     na = np.array([1, 1, 0.5, 0.5, 0.1, 0.5])
@@ -592,32 +612,35 @@ def test_moffat():
     # print(x)
     nret, nret_jac = asmoffat1d(nx, *na)
     # nret_jac = ngauss_jac(nx, *na)
-    plt.figure()
-    plt.xlim(-10, 10)
-    plt.plot(nx, nret)
-    plt.figure()
-    plt.plot(nx, nret_jac)
-    plt.show()
+    if plot:
+        plt.figure()
+        plt.xlim(-10, 10)
+        plt.plot(nx, nret)
+        plt.figure()
+        plt.plot(nx, nret_jac)
+        plt.show()
 
     sigma = 0.02
     y = nret + np.random.standard_normal(nret.size) * sigma
 
     # TODO add test of the gradient with a optimize.curve_fit
     print("===FIT grad ==========")
-    a0 = np.array([1.5, 0.4, 2., 5., 1.5])
+    # a0 = np.array([1.5, 0.4, 2., 5., 1.5, 5.])
+    a0 = np.array([1.5, 0.4, 1., 0.2, 0.5 , 0.4])
 
     # wrap moffat1d in a way suitable for curve_fit
     curve_fit_func = WrapToCurveFit(asmoffat1d)
 
     resopt, reqcov = optimize.curve_fit(curve_fit_func, nx, y, p0=a0)
     resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
-                                                jac=curve_fit_func)
+                                                jac=curve_fit_func.jac)
 
-    model = moffat1d(nx, *resopt)[0]
-    model_jac = moffat1d(nx, *resopt_jac)[0]
+    model = asmoffat1d(nx, *resopt)[0]
+    model_jac = asmoffat1d(nx, *resopt_jac)[0]
     chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
     chi2_jac = np.sum(((y-model_jac)/sigma)**2)/(y.size-a.size+1)
 
+    print(f"a initial {a}")
     print("=======chi2")
     print(f"chi2 reduit {chi2}")
     print(f"chi2_jac reduit {chi2_jac}")
@@ -625,13 +648,14 @@ def test_moffat():
     print(f"resopt {resopt}")
     print(f"resopt_jac {resopt_jac}")
 
-    plt.figure()
-    # plt.plot(waxis, dop(*a0))
-    plt.plot(nx, model, label="model")
-    plt.plot(nx, model_jac, label="model_jac")
-    plt.plot(nx, y, label="y")
-    plt.legend()
-    plt.show()
+    if plot:
+        plt.figure()
+        # plt.plot(waxis, dop(*a0))
+        plt.plot(nx, model, label="model")
+        plt.plot(nx, model_jac, label="model_jac")
+        plt.plot(nx, y, label="y")
+        plt.legend()
+        plt.show()
 
 
 if __name__ == '__main__':
