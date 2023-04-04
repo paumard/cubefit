@@ -22,9 +22,9 @@ from cubefit.lineprofiles import gauss, ngauss
 
 l1l2_num=RegularizationWithNumericalGradient(l1l2)
 
-DEBUG=True
+DEBUG=False
 
-#regularizations=[None, l1l2]
+#regularizations=[l1l2_num]
 regularizations=[None, markov, l1l2, l1l2_num]
 
 def add_noise(cube, sigma=0.02):
@@ -42,27 +42,6 @@ def add_noise(cube, sigma=0.02):
     tmp_cube = np.copy(cube)
     tmp_cube = cube + rng.standard_normal(cube.shape) * psigma
     return tmp_cube
-
-def plot_res(res, figsize=(7, 7), fig=None, axes=None):
-    # How many parameters
-    nterms=res.shape[2]
-    # Create subplots if not provided
-    if axes is None:
-        # How many rows (ny) and columns (nx) in plot?
-        nx=int(np.sqrt(nterms))
-        if nx*nx == nterms:
-            ny=nx
-        else:
-            ny=nx+1
-            nx=ny
-        fig=plt.figure(figsize=figsize)
-        axes = [fig.add_subplot(ny, nx, p) for p in range(1, nterms+1)]
-    # Plot one parameters map in each subplot
-    for k in range(nterms):
-        axes[k].imshow(res[:,:,k])
-    axes[0].figure.show()
-
-    return fig, axes
 
 # Shape of data cube (nx, ny, nz)
 nx, ny, nz = 16, 16, 21
@@ -95,22 +74,48 @@ vaxis = (waxis-w0)/w0*profile.light_speed
 xreal=np.transpose(np.asarray([I, v, dv]), (1, 2, 0))
 reality=model_none.model(xreal)
 
-freal, areal=plot_res(xreal)
-freal.suptitle("Truth")
-areal[0].set_title("Flux")
-areal[1].set_title("Velocity")
-areal[2].set_title("Width")
-freal.show()
-
 # Sigma of errors to add to "true" cube to get "observational" data
 sigma = 0.2*np.max(reality)
 snr=np.max(reality, axis=2)/sigma
 data = add_noise(reality, sigma)
 weights = np.full(data.shape, 1/sigma)
 
+# Display "truth"
+imshow_kwds=[{"vmin": np.min(I),
+              "vmax": np.max(I)},
+             {"vmin": np.min(v),
+              "vmax": np.max(v)},
+             {"vmin": np.min(dv),
+              "vmax": np.max(dv)}]
+model_none.view_data["imshow_kwds"]=imshow_kwds
+
+def view_more(fig, axes):
+    fig.suptitle("Truth")
+    axes[0].set_title("Flux")
+    axes[1].set_title("Velocity")
+    axes[2].set_title("Width")
+    axes[0].contour(snr, [0.5, 1])
+    axes[1].contour(snr, [0.5, 1])
+    axes[2].contour(snr, [0.5, 1])
+model_none.view_more=view_more
+model_none.view(xreal, noscale=True)
+model_none.view_data["fig"]=None # detach figure
+
 # Initial guess for fit. Can be 1D or 3D.
 xtest_1d=[np.max(I), 0., np.std(v)]
 xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
+
+def view_more(fig, axes):
+    fig.suptitle("Initial guess")
+    axes[0].set_title("Flux")
+    axes[1].set_title("Velocity")
+    axes[2].set_title("Width")
+    axes[0].contour(snr, [0.5, 1])
+    axes[1].contour(snr, [0.5, 1])
+    axes[2].contour(snr, [0.5, 1])
+model_none.view_more=view_more
+model_none.view(xtest, noscale=True)
+model_none.view_data["fig"]=None # detach figure
 
 if DEBUG:
     fig=plt.figure()
@@ -129,6 +134,18 @@ if None in regularizations:
     # Do fit
     model_none.data = data
     model_none.weight = weights
+
+    def view_more(fig, axes):
+        fig.suptitle("No-regularization fit")
+        axes[0].set_title("Flux")
+        axes[1].set_title("Velocity")
+        axes[2].set_title("Width")
+        axes[0].contour(snr, [0.5, 1])
+        axes[1].contour(snr, [0.5, 1])
+        axes[2].contour(snr, [0.5, 1])
+
+    model_none.view_more=view_more
+    model_none.view_data["imshow_kwds"]=imshow_kwds
 
     res_x_none, fx_none, gx_none, status_none = model_none.fit(xtest)
 
@@ -153,17 +170,6 @@ if None in regularizations:
         # Display fit for lower left pixel
         plot3(10, 6)
 
-    fnone, anone=plot_res(res_x_none)
-    fnone.suptitle("No-regularization fit")
-    anone[0].set_title("Flux")
-    anone[1].set_title("Velocity")
-    anone[2].set_title("Width")
-    anone[0].contour(snr, [0.5, 1])
-    anone[1].contour(snr, [0.5, 1])
-    anone[2].contour(snr, [0.5, 1])
-    fnone.show()
-    plt.pause(1)
-
 if markov in regularizations:
     # Do fit with regularization
     model_markov = CubeModel(profile=profile, profile_xdata=waxis, regularization=markov)
@@ -173,25 +179,26 @@ if markov in regularizations:
     mu_markov    =[1., 1., 2.]
     model_markov.delta=np.sqrt(np.asarray(mu_markov)*np.asarray(weight_markov))
     model_markov.scale=np.asarray(mu_markov)/model_markov.delta
-    res_x_markov, fx_markov, gx_markov, status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
 
+    def view_more(fig, axes):
+        fig.suptitle("markov fit")
+        axes[0].set_title("Flux")
+        axes[1].set_title("Velocity")
+        axes[2].set_title("Width")
+        axes[0].contour(snr, [0.5, 1])
+        axes[1].contour(snr, [0.5, 1])
+        axes[2].contour(snr, [0.5, 1])
+
+    model_markov.view_more=view_more
+    model_markov.view_data["imshow_kwds"]=imshow_kwds
+
+    res_x_markov, fx_markov, gx_markov, status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
 
     # Compute model cube
     model_markov_cube=model_markov.model(res_x_markov)
 
     chi2=np.sum(((data-model_markov_cube)/sigma)**2)/(data.size-res_x_markov.size)
     print(f"reduced chi2 == {chi2}")
-
-    fmarkov, amarkov=plot_res(res_x_markov)
-    fmarkov.suptitle("markov fit")
-    amarkov[0].set_title("Flux")
-    amarkov[1].set_title("Velocity")
-    amarkov[2].set_title("Width")
-    amarkov[0].contour(snr, [0.5, 1])
-    amarkov[1].contour(snr, [0.5, 1])
-    amarkov[2].contour(snr, [0.5, 1])
-    fmarkov.show()
-    plt.pause(1)
 
 if l1l2 in regularizations:
     # Do fit with regularization
@@ -202,6 +209,19 @@ if l1l2 in regularizations:
     mu_l1l2    =[1., 1., 2.]
     model_l1l2.delta=np.sqrt(np.asarray(mu_l1l2)*np.asarray(weight_l1l2))
     model_l1l2.scale=np.asarray(mu_l1l2)/model_l1l2.delta
+
+    def view_more(fig, axes):
+        fig.suptitle("l1l2 fit")
+        axes[0].set_title("Flux")
+        axes[1].set_title("Velocity")
+        axes[2].set_title("Width")
+        axes[0].contour(snr, [0.5, 1])
+        axes[1].contour(snr, [0.5, 1])
+        axes[2].contour(snr, [0.5, 1])
+
+    model_l1l2.view_more=view_more
+    model_l1l2.view_data["imshow_kwds"]=imshow_kwds
+
     res_x_l1l2, fx_l1l2, gx_l1l2, status_l1l2 = model_l1l2.fit(xtest)
 
 
@@ -210,17 +230,6 @@ if l1l2 in regularizations:
 
     chi2=np.sum(((data-model_l1l2_cube)/sigma)**2)/(data.size-res_x_l1l2.size)
     print(f"reduced chi2 == {chi2}")
-
-    fl1l2, al1l2=plot_res(res_x_l1l2)
-    fl1l2.suptitle("l1l2 fit")
-    al1l2[0].set_title("Flux")
-    al1l2[1].set_title("Velocity")
-    al1l2[2].set_title("Width")
-    al1l2[0].contour(snr, [0.5, 1])
-    al1l2[1].contour(snr, [0.5, 1])
-    al1l2[2].contour(snr, [0.5, 1])
-    fl1l2.show()
-    plt.pause(1)
 
 if l1l2_num in regularizations:
     # Do fit with regularization
@@ -231,6 +240,19 @@ if l1l2_num in regularizations:
     mu_l1l2_num    =[1., 1., 2.]
     model_l1l2_num.delta=np.sqrt(np.asarray(mu_l1l2_num)*np.asarray(weight_l1l2_num))
     model_l1l2_num.scale=np.asarray(mu_l1l2_num)/model_l1l2_num.delta
+
+    def view_more(fig, axes):
+        fig.suptitle("l1l2_num fit")
+        axes[0].set_title("Flux")
+        axes[1].set_title("Velocity")
+        axes[2].set_title("Width")
+        axes[0].contour(snr, [0.5, 1])
+        axes[1].contour(snr, [0.5, 1])
+        axes[2].contour(snr, [0.5, 1])
+
+    model_l1l2_num.view_more=view_more
+    model_l1l2_num.view_data["imshow_kwds"]=imshow_kwds
+
     res_x_l1l2_num, fx_l1l2_num, gx_l1l2_num, status_l1l2_num = model_l1l2_num.fit(xtest)
 
 
@@ -239,18 +261,6 @@ if l1l2_num in regularizations:
 
     chi2=np.sum(((data-model_l1l2_num_cube)/sigma)**2)/(data.size-res_x_l1l2_num.size)
     print(f"reduced chi2 == {chi2}")
-
-    fl1l2_num, al1l2_num=plot_res(res_x_l1l2_num)
-    fl1l2_num.suptitle("l1l2 (numerical gradient) fit")
-    al1l2_num[0].set_title("Flux")
-    al1l2_num[1].set_title("Velocity")
-    al1l2_num[2].set_title("Width")
-    al1l2_num[0].contour(snr, [0.5, 1])
-    al1l2_num[1].contour(snr, [0.5, 1])
-    al1l2_num[2].contour(snr, [0.5, 1])
-    fl1l2_num.show()
-    plt.pause(1)
-
 
 # Ensure windows don't close automatically
 plt.show()

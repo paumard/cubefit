@@ -321,7 +321,9 @@ class CubeModel:
     #            poffset=None, ptweak=None):
     def __init__(self, data=None, profile=None, profile_xdata=None, weight=None,
                  scale=None, delta=None, pscale=None, poffset=None,
-                 ptweak=None, regularization=l1l2, decorrelate=None):
+                 ptweak=None, regularization=l1l2, decorrelate=None,
+                 view_data={"figsize": (7, 7)}, view_more=None, framedelay=3):
+
         #if (regularization is not None):
         self.regularization = regularization
         #else:
@@ -342,7 +344,14 @@ class CubeModel:
         self.poffset = poffset
         self.ptweak = ptweak
         self.decorrelate = decorrelate
+        self.framedelay=framedelay
+        # private data
+        ## to pass additional information from eval to printer
         self._eval_data=dict()
+        self._printer_data=dict()
+        ## to store data between printer calls
+        self.view_data=view_data
+        self.view_more=view_more
 
         # debug option
         self.dbg = False
@@ -369,43 +378,40 @@ class CubeModel:
         */
         """
 
-        d = x.shape
+        if not noscale:
+            x = self.denormalize_parameters(x)
 
-        if (noscale is not None):
-            psc = np.ones(d[2])
-            pof = np.zeros(d[2])
-        else:
-            if (self.pscale is None):
-                psc = np.ones(d[2])
+        nterms=np.shape(x)[2]
+
+        # Prepare plot window
+        if ("fig" not in self.view_data
+            or self.view_data["fig"] is None):
+            self.view_data["fig"] = \
+                plt.figure(figsize=self.view_data["figsize"])
+            self.view_data["fig"].show()
+            self.view_data["axes"] = []
+        if ("axes" not in self.view_data
+            or len(self.view_data["axes"]) != nterms) :
+            nx=int(np.sqrt(nterms))
+            if nx*nx == nterms:
+                ny=nx
             else:
-                if (self.pscale.size == 1):
-                    psc = np.full(d[2], self.pscale)
-                else:
-                    psc = self.pscale
+                ny=nx+1
+                nx=ny
+                self.view_data["axes"] = \
+                    [self.view_data["fig"].add_subplot(ny, nx, p)
+                     for p in range(1, nterms+1)]
 
-            if (self.poffset is None):
-                pof = np.zeros(d[2])
+        for k in range(nterms):
+            self.view_data["axes"][k].clear()
+            if "imshow_kwds" in self.view_data:
+                kwds=self.view_data["imshow_kwds"][k]
             else:
-                if (self.poffset.size == 1):
-                    pof = np.full(d[2], self.poffset)
-                else:
-                    pof = self.poffset
-
-        #astropy_mpl_style['axes.grid'] = False
-        #plt.style.use(astropy_mpl_style)
-        #plt.figure()
-        #for k in range(d[2]):
-            # plt.imshow(noise[:,:,22], cmap='viridis')
-            # plt.imshow(noise[:,:,22], cmap='gray')
-            # plt.show()
-        #    plt.imshow(x[:,:,k], cmap='viridis')
-        #    plt.plot(x[:, :, k])
-
-        #plt.colorbar()
-        #plt.show()
-        # voir mappable vmin vmax
-        # colorbar, min(x(,,k))*psc(k)+pof(k),max(x(,,k))*psc(k)+pof(k)
-        #plt.pause(1)
+                kwds=dict()
+            self.view_data["axes"][k].imshow(x[:,:,k], **kwds)
+        if self.view_more is not None:
+            self.view_more(self.view_data["fig"], self.view_data["axes"])
+        self.view_data["fig"].canvas.draw()
 
     def model(self, params, noscale=False):
         """
@@ -776,21 +782,37 @@ class CubeModel:
     def printer(self, output, iters, evals, rejects,
                 t, x, fx, gx, pgnorm, alpha, fg):
         """Printer for `optm.vmlmb`."""
+
+        nterms= np.shape(x)[2]
+
+        # First call with iters < 1 to initialize
         if iters < 1:
+            # Initialize tprev
+            self._printer_data["tprev"]=-self.framedelay-1
+
+            # Print header line
             row = "# Iter.   Time (ms)    Eval. Reject.       Obj. Func.           Chi2   "
             lin = "# ----------------------------------------------------------------------"
-            for k in range(len(self._eval_data['regul'])):
+            for k in range(nterms):
                 row += f"    Regul[{k}]"
                 lin +=  "------------"
             row += "       Grad.       Step"
             lin += "-----------------------"
             print(row, file=output)
             print(lin, file=output)
+
+        # print info on one row
         row = f"{iters:7d} {t*1e3:11.3f} {evals:7d} {rejects:7d} {fx:23.15e} {self._eval_data['chi2']:11.3e} "
         for val in self._eval_data['regul']:
             row += f"{val:11.3e} "
         row += f"{pgnorm:11.3e} {alpha:11.3e}"
         print(row, file=output)
+
+        # Plot x
+        if (self.framedelay>=0
+            and t-self._printer_data["tprev"] > self.framedelay):
+            self.view(x)
+            self._printer_data["tprev"] = t
 
     def criterion(self, x, noscale=False):
         '''self.eval(x, noscale=noscale)[0]
@@ -959,7 +981,8 @@ class CubeModel:
                                          verb=verb,
                                          printer=printer,
                                          **vmlmb_kwargs)
-            # restore, use, pscale, poffset
+        self.view(result)
+
         # denormalize?
         if (self.pscale is not None):
             for k in range(nx):
