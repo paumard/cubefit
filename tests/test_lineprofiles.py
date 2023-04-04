@@ -1,6 +1,6 @@
 import os
 from .common import *
-from cubefit.lineprofiles import gauss, ngauss, WrapToCurveFit
+from cubefit.lineprofiles import gauss, ngauss, WrapToCurveFit, WrapFromAstropy
 
 DEBUG=os.environ.get("TEST_LINEPROFILES_DEBUG")
 if DEBUG:
@@ -44,6 +44,45 @@ class TestGauss(Test1DModel):
 
     def test_gauss_jacobian(self):
         a = [1. , 1. , 0.5, 0.5, 0.1]
+        x = np.linspace(-10, 10, 3000)
+        self.check_jacobian(gauss, x, *a)
+
+class TestAstropyGauss(Test1DModel):
+    '''UnitTest class to test astropy.modeling Gaussian function
+    '''
+
+    def __init__(self, *args, **kwargs):
+        super(TestAstropyGauss, self).__init__(*args, **kwargs)
+        import astropy.modeling
+        self.gauss=WrapFromAstropy(astropy.modeling.functional_models.Gaussian1D)
+
+    def test_gauss(self):
+        gauss=self.gauss
+        # Test Gaussian for a few known values
+        params=(1., 0., 1.)
+        self.assertAlmostEqual(gauss(0., *params)[0], 1)
+        self.assertAlmostEqual(gauss(1., *params)[0], np.exp(-0.5))
+        self.assertAlmostEqual(gauss(2., *params)[0], np.exp(-2))
+        self.assertAlmostEqual(gauss(-2., *params)[0], np.exp(-2))
+        params=(2., 0., 1.)
+        self.assertAlmostEqual(gauss(0., *params)[0], 2)
+        self.assertAlmostEqual(gauss(1., *params)[0], 2*np.exp(-0.5))
+        self.assertAlmostEqual(gauss(2., *params)[0], 2*np.exp(-2))
+        self.assertAlmostEqual(gauss(-2., *params)[0], 2*np.exp(-2))
+        params=(1., 1., 1.)
+        self.assertAlmostEqual(gauss(1., *params)[0], 1)
+        self.assertAlmostEqual(gauss(2., *params)[0], np.exp(-0.5))
+        self.assertAlmostEqual(gauss(3., *params)[0], np.exp(-2))
+        self.assertAlmostEqual(gauss(-1., *params)[0], np.exp(-2))
+        params=(1., 0., 2.)
+        self.assertAlmostEqual(gauss(0., *params)[0], 1)
+        self.assertAlmostEqual(gauss(2., *params)[0], np.exp(-0.5))
+        self.assertAlmostEqual(gauss(4., *params)[0], np.exp(-2))
+        self.assertAlmostEqual(gauss(-4., *params)[0], np.exp(-2))
+
+    def test_gauss_jacobian(self):
+        gauss=self.gauss
+        a = [1. , 1. , 0.5]
         x = np.linspace(-10, 10, 3000)
         self.check_jacobian(gauss, x, *a)
 
