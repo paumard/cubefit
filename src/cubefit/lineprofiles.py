@@ -239,6 +239,28 @@ class WrapFromCurveFit:
             jac = self.jac(xdata, *params)
         return val, jac
 
+class WrapFromAstropy:
+    '''Wrap a astropy.modeling objective function as a cubefit profile
+
+    Parameters
+    ----------
+    m : astropy.modeling.core.Fittable1DModel
+        A  astropy.modeling objective function model class or instance.
+
+    See Also
+    --------
+    astropy.modeling
+    '''
+
+    def __init__(self, m):
+        self.m=m
+
+    def __call__(self, xdata, *params):
+        ''' self(xdata, *params) -> ydata, jacobian
+        '''
+        return (self.m.evaluate(xdata, *params),
+                np.transpose(self.m.fit_deriv(xdata, *params)))
+
 def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
     '''Compute Jacobian matrix of a curve_fit model function
 
