@@ -1,4 +1,4 @@
-
+import sys
 import numpy as np
 import matplotlib.pyplot as plt
 # from mpl_toolkits import mplot3d
@@ -24,12 +24,12 @@ import sys
 
 # Look hard for vmlmb
 try:
-    from VMLMB.python.optm import vmlmb
+    from VMLMB.python.optm import vmlmb, reason as vmlmb_reason
 except ImportError:
     try:
-        from vmlmb.optm import vmlmb
+        from vmlmb.optm import vmlmb, reason as vmlmb_reason
     except ImportError:
-        from optm import vmlmb
+        from optm import vmlmb, reason as vmlmb_reason
 
 
 # include "multiprofile.i"
@@ -201,8 +201,8 @@ class CubeModel:
     Attributes
     ----------
     data : array_like, optional
-        The data to fit, a NX x NY x NZ array. Mandatory to call
-        methods eval() and fit(). The spectra are in the Z dimension.
+        The data to fit, a NY x NX x NW array. Mandatory to call
+        methods eval() and fit(). The spectra are in the W dimension.
     weight: array_like, optional
         An array with the same dimensions as data, giving the relative
         weights of the data points for fitting. Set cell to 0. for
@@ -322,7 +322,7 @@ class CubeModel:
     def __init__(self, data=None, profile=None, profile_xdata=None, weight=None,
                  scale=None, delta=None, pscale=None, poffset=None,
                  ptweak=None, regularization=l1l2, decorrelate=None,
-                 view_data={"figsize": (7, 7)}, view_more=None, framedelay=3):
+                 view_data=None, view_more=None, framedelay=3):
 
         #if (regularization is not None):
         self.regularization = regularization
@@ -350,6 +350,8 @@ class CubeModel:
         self._eval_data=dict()
         self._printer_data=dict()
         ## to store data between printer calls
+        if view_data is None:
+            view_data={"figsize": (7,7)}
         self.view_data=view_data
         self.view_more=view_more
 
@@ -398,9 +400,9 @@ class CubeModel:
             else:
                 ny=nx+1
                 nx=ny
-                self.view_data["axes"] = \
-                    [self.view_data["fig"].add_subplot(ny, nx, p)
-                     for p in range(1, nterms+1)]
+            self.view_data["axes"] = \
+                [self.view_data["fig"].add_subplot(ny, nx, p)
+                 for p in range(1, nterms+1)]
 
         for k in range(nterms):
             self.view_data["axes"][k].clear()
@@ -541,7 +543,9 @@ class CubeModel:
         Parameters
         ----------
         x : array_like
-            3D array of parameters
+            3D array of parameters, with shape NY×NX×NP where NY and
+            NX are the same as the two first dimensions of self.data
+            and NP is the number of parameters for self.profile.
         noscale : bool, optional
             Whether to scale parameters according to poffset and
             pscale. Always False during a fit, but should generally be
@@ -819,178 +823,102 @@ class CubeModel:
         '''
         return self.eval(x, noscale=noscale)[0]
 
-    # __call__ ??  *fout *gout mis a None pour dbg
-    # fout gout
     # Accept all vmlmb keywords (vmlmb_kwargs).
     # lower and upper need special treatment (for rescaling).
     # There's a bug in optm which requires verb > 0.
+    # output is used in fit, we need it.
+    # Set printer to self.printer by default, but not in the signature.
     def fit(self,x,
             lower=None, upper=None,
-            verb=1, printer=None,
+            verb=1, printer=None, output=sys.stdout,
             **vmlmb_kwargs):
         """Fit model to self.data.
 
-        Wrapper around:
-          (result, fx, gx, status) = vmlmb(self.eval, x,
-                                           lower=lower, upper=upper,
-                                           verb=verb, printer=printer 
-                                           **vmlmb_kwargs)
+        Tis is a wrapper around the fitter (vmlmb) which normalizes
+        parameters according to self.pscale and self.poffset, sets up
+        a pretty printer etc.
 
-        Arguments:
-        x -- the stack of parameters to fit. Rescaled according to
-          self.pscale and self.poffset prior to calling vmlmb and
-          scaled back to physical values in self.eval(). RESULT is
-          also scaled back before being returned.
+        Parameters
+        ----------
+        x : array_like
+            Initial guess for the stack of parameters to fit (see
+            eval). Rescaled according to self.pscale and self.poffset
+            prior to calling vmlmb and scaled back to physical values
+            in self.eval(). The result is also scaled back before
+            being returned.
+        lower, upper : array_like, optional
+            Passed to vmlmb after rescaling according to self.poffset
+            and self.pscale.
+        printer : callable
+            Passed to vmlmb, if None, default to self.printer.
+        verb : int
+            Passed to vmlmb.
+        output :
+            Passed to vmlmb.
+        **vmlmb_kwargs : dict, optional
+            Extra arguments are passed to vmlmb.
 
-        Keyword arguments:
-        All keywords are passed untouched to vmlmb, except:
-        lower, upper -- array_like
-          passed to vmlmb after rescaling according to slef.poffset
-          and self.pscale.
-        printer -- callable
-          passed to vmlmb, if None, default to self.printer.
+        Returns
+        -------
+        array_like
+            Best-fit parameters.
+        float
+            Value of the objective function eval at the found optimum.
+        array_like
+            Gradient of the objective function eval at the found optimum.
+        int
+            Status code indicating the reason of the termination of
+            the vmlmb algorithm. See optm.reason.
 
+        See Also
+        --------
+        CubeModel.eval : The objective function.
+        optm.vmlmb : The fitter.
+        optm.reason : Reasons corresponding to status codes.
         """
+
+        # This can't be done in signature
         if printer is None:
             printer=self.printer
 
-        if self.dbg:
-            #pass
-            print("DBG CALL fit func with x")
-            print(f"{x}")
-            print(f"{type(x)}")
-            # print(f"x[49,49,:]{x[49,49,]}")
-            # print(f"x[50,50,:]{x[50,50,]}")
-            # print(f"x[51,51,:]{x[51,51,]}")
+        # Normalize paramaters according to user expectation as fitter
+        # may behave better and it may be easier to tune
+        # hyperparameters if all fitted quantities are or order 1.
+        x = self.normalize_parameters(x)
+        if (lower is not None):
+            lower = self.normalize_parameters(lower)
+        if (upper is not None):
+            upper = self.normalize_parameters(upper)
 
-            # print(f"with pscale {self.pscale}")
-            # print(f"with poffset {self:q.poffset}")
-
-            # print(f"with scale {self.scale}")
-            # print(f"with delta {self.delta}")
-
-            # nx = (d=dimsof(x))(0)
-        d = x.shape
-        nx = x.shape[-1]
-        if self.dbg:
-            print(f"nx is {nx}")
-
-        # pour DBG
-        # op_viewer = None
-        # view is a yorcik function
-        # view = None
-
-        # move inside a graphic/draw function
-        # if (verb and (op_viewer is not None) and (view is not None)
-        #    and callable(op_viewer) and callable(view)):
-        #    for k in range(nx):
-        #        #TODO cubeview
-        #        winkill, k
-        #        window, k
-        #        cv_vpaspect,d(2),d(3)
-        #        # force les axes de la fenetre pour ratio
-
-
-        ## normalize paramaters put roughly in -1,1 boundaries according to user
-        # expectation
-        if (self.poffset is not None):
-            print(f"self.poffset {self.poffset}")
-            if (self.poffset.size != nx):
-                print(f"self.poffset.size {self.poffset.size}")
-                print(f"self.poffset.shape {self.poffset.shape}")
-                print(f"self.poffset {self.poffset}")
-                print(f"nx {nx}")
-                self.poffset = np.full(nx, self.poffset)
-            for k in range(nx):
-                x[:,:, k] -= self.poffset[k]
-            if (lower is not None):
-                for k in range(nx):
-                    lower[:,:, k] -= self.poffset[k]
-            if (upper is not None):
-                for k in range(nx):
-                    upper[:,:, k] -= self.poffset[k]
-        if self.dbg:
-            print("after apply poffset")
-            # print(f"{x}")
-            print(f"x[49,49,:]{x[49,49,]}")
-            print(f"x[50,50,:]{x[50,50,]}")
-            print(f"x[51,51,:]{x[51,51,]}")
-
-
-        if (self.pscale is not None):
-            print("APPLY PSCALE")
-            if (self.pscale.size != nx):
-                self.pscale = np.full(nx, self.pscale)
-
-            print(f"nx  {nx}")
-            for k in range(nx):
-                x[:,:, k] /= self.pscale[k]
-
-            if self.dbg:
-                print("in2 poffset")
-                # print(f"{x}")
-                print(f"x[49,49,:]{x[49,49,]}")
-                print(f"x[50,50,:]{x[50,50,]}")
-                print(f"x[51,51,:]{x[51,51,]}")
-
-
-            if (lower is not None):
-                for k in range(nx):
-                    lower[:,:, k] /= self.pscale[k]
-            if (upper is not None):
-                for k in range(nx):
-                    upper[:,:, k] /= self.pscale[k]
-
-        if self.dbg:
-            # end normalize
-            print("after apply pscale")
-            # print(f"{x}")
-            print(f"x[49,49,:]{x[49,49,]}")
-            print(f"x[50,50,:]{x[50,50,]}")
-            print(f"x[51,51,:]{x[51,51,]}")
-
-
-
+        # scale and delta are the hyperparameters for
+        # self.regularization. Ensure they have the right shape.
+        nterms = x.shape[2]
         if (self.scale is None):
-            #self.scale = np.full(d.shape[3], 1.)
-            self.scale = np.ones(d[2])
+            self.scale = np.ones(nterms)
         else:
             if (self.scale.size == 1):
-                self.scale = np.full(d[2], self.scale)
+                self.scale = np.full(nterms, self.scale)
 
         if (self.delta is None):
-            #self.delta = np.full(d.shape[3], 1.)
-            self.delta = np.ones(d[2])
+            self.delta = np.ones(nterms)
         else:
             if (self.delta.size == 1):
-                self.delta = np.full(d[2], self.delta)
+                self.delta = np.full(nterms, self.delta)
 
-            # save, use, pscale, poffset, scale, delta
-
-            # TODO omnipack op_f => eval
-            # result = op_mnb(op_f, x, fout, gout, extra=use(), \
-            #        lower=lower, upper=upper, method=method, \
-            #        mem=mem, verb=verb, quiet=quiet,\
-            #    viewer=op_viewer, printer=op_printer,\
-            #    maxiter=maxiter, maxeval=maxeval,output=output,\
-            #    frtol=frtol, fatol=fatol,\
-            #    sftol=sftol, sgtol=sgtol, sxtol=sxtol )
-
+        # Perform the actual fit.
         (result, fx, gx, status) = vmlmb(self.eval, x,
                                          lower=lower, upper=upper,
                                          verb=verb,
                                          printer=printer,
+                                         output=output,
                                          **vmlmb_kwargs)
-        self.view(result)
+        if verb > 0:
+            print(f"# Termination: {vmlmb_reason(status)}", file=output)
+            if self.framedelay >= 0:
+                self.view(result)
 
-        # denormalize?
-        if (self.pscale is not None):
-            for k in range(nx):
-                result[:, k] *= self.pscale[k]
-
-        if (self.poffset is not None):
-            for k in range(nx):
-                result[:, k] += self.poffset[k]
+        # If we normalized x, we need to denormalize the results.
+        result = self.denormalize_parameters(result)
 
         return result, fx, gx, status
 
@@ -1183,6 +1111,7 @@ def test_gauss():
     (res_x, fx, gx, status) = vmlmb(fitobj_eval_gauss.eval, x0, mem=x0.size,
                                     blmvm=False, fmin=0, verb=1,
                                     output=sys.stdout)
+
 
     # write_fits(res_x, "mycube_res_x_gauss.fits")
     # write_fits(fx, "mycube_res_fx_dop.fits")

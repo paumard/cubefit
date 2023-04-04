@@ -129,7 +129,7 @@ class TestCubemodel(unittest.TestCase):
         waxis = np.linspace(2.15e-6, 2.175e-6, nz)
 
         profile = DopplerLines(2.166120e-6, profile=gauss)
-        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=l1l2)
+        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
         cube_real = model.model(xreal)
         model.data = cube_real
 
@@ -246,7 +246,7 @@ class TestCubemodel(unittest.TestCase):
         nx, ny, nz = (5, 5, 433)
         # Model we want to test
         model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz),
-                          regularization=None)
+                          regularization=None, framedelay=-1)
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d = (1,1, 0.5, 0.5,0.1)
         # Initial guess for fit. Can be 1D or 3D.
@@ -271,7 +271,7 @@ class TestCubemodel(unittest.TestCase):
         profile = DopplerLines(2.166120, profile=ngauss)
         profile_xdata = np.linspace(2.15, 2.175, nz)
         model = CubeModel(profile=profile, profile_xdata=profile_xdata,
-                          regularization=None)
+                          regularization=None, framedelay=-1)
 
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d=(1.2, 0.5, 25., 100)
@@ -299,7 +299,7 @@ class TestCubemodel(unittest.TestCase):
         profile = DopplerLines(2.166120, profile=ngauss)
         profile_xdata = np.linspace(2.15, 2.175, nz)
         model = CubeModel(profile=profile, profile_xdata=profile_xdata,
-                          regularization=None)
+                          regularization=None, framedelay=-1)
 
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d=(1.2, 0.5, 25., 100)
@@ -337,7 +337,7 @@ class TestCubemodel(unittest.TestCase):
 
         profile = gauss
         model = CubeModel(profile=profile, profile_xdata=waxis,
-                          regularization=None)
+                          regularization=None, framedelay=-1)
         model.data = model.model(xreal)
         val = model.criterion(xtest)
 
