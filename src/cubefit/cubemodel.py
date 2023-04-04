@@ -342,6 +342,7 @@ class CubeModel:
         self.poffset = poffset
         self.ptweak = ptweak
         self.decorrelate = decorrelate
+        self._eval_data=dict()
 
         # debug option
         self.dbg = False
@@ -668,6 +669,8 @@ class CubeModel:
         # //  window,34
         # //  plg, tot
 
+        self._eval_data["chi2"] = res
+
         # TODO optimize xbig for regularization
         # TODO implemente regularization
         if self.dbg:
@@ -700,6 +703,8 @@ class CubeModel:
         # g is a grad
         #g = np.empty(xbig.shape[:-1])
         # TODO for debug only
+
+        self._eval_data["regul"] = np.zeros(d[2])
         for k in range(d[2]):
             # TODO pass dict to regularization function
             if self.regularization is not  None:
@@ -721,6 +726,7 @@ class CubeModel:
             # if (returnmaps):
             #    maps[:,:,k] =  tmp[:d[0], :d[1]]
             # tmp=0
+                self._eval_data["regul"][k] = tmp
                 res += tmp
             # TODO indices commence a 0 ?
             # print(f"d[0] {d[0]} d[1] {d[1]} ")
@@ -767,72 +773,24 @@ class CubeModel:
         #  out:
         return res, gx
 
-    def printer(self, output, iter, eval, cpu, fx, gnorm, steplen, x):
-        """
-        /* DOCUMENT cubeview.printer method
-                fitobj, printer, output, iter, eval, cpu, fx, gnorm, steplen, x
-
-         */
-        """
-        d = x.shape
-
-        npairs = 0
-        if (self.decorrelate is not None):
-            dd = self.decorrelate.shape
-            if (dd.shape[0] != 2):
-                self.decorrelate = np.reshape(self.decorrelate,
-                                              [2, self.decorrelate.size, 1])
-                dd = self.decorrelate.shape
-            npairs = dd.shape[2]
-
-        if (iter == 0):
-            # write, output, format="# %s",
-            # "ITER  EVAL   CPU (ms)        FUNC               GNORM   STEPLEN"
-            print(f"ITER EVAL CPU (ms)\t FUNC\t  GNORM\t  STEPLEN")
-            for k in range(d.shape[3]):
-                # write, output, format=" REGUL[%i]", k
-                print(f"REGUL[{k}]")
-
-            for pair in range(npairs):
-                i1 = np.floor(self.decorrelate(1, pair))
-                i2 = np.floor(self.decorrelate(2, pair))
-                #  write, format=" CORR[%i,%i]", i1, i2
-                print(f"CORR[{i1},{i2}]")
-
-            #  write, output, format="\n# %s",
-            print(f"------------------------------------------------------")
-            for k in range(d.shape[3]):
-                #  write, output, format="%s","---------"
-                print(f"---------")
-            for pair in range(npairs):
-                #  write, output, format="%s","----------"
-                print(f"----------")
-            #  write, output, format="%s\n", ""
-            print(f"")
-        #  format = " %5d %5d %10.3f  %+-24.15e%-9.1e%-9.1e"
-        #  write, output, format=" %5d %5d %10.3f  %+-24.15e%-9.1e%-9.1e",
-        #  iter, eval, cpu, fx, gnorm, step
-
-        #  print(f"{iter}  {eval} {cpu} {fx} {gnorm} {step}")
-
-        for k in range(d.shape[3]):
-            # write, output, format="%-9.1e", regularization(x(,,k), g,
-            print(f'{self.regularization(x[:,:,k], scale=self.scale[k],delta=self.delta[k])}')
-
-        for pair in range(npairs):
-            i1 = np.floor(self.decorrelate(1, pair))
-            i2 = np.floor(self.decorrelate(2, pair))
-            w = self.decorrelate(2, pair)
-            if (dd.shape[2] >= 4):
-                pow = self.decorrelate(4, pair)
-            else:
-                pow = 2
-            xy = x[:, :, [i1, i2]]
-            correl = CubeModel.corr(xy)
-            # write, output, format="%-10.1e", w * correl**pow
-            print(f"{w*correl**pow}")
-
-        print(f"")
+    def printer(self, output, iters, evals, rejects,
+                t, x, fx, gx, pgnorm, alpha, fg):
+        """Printer for `optm.vmlmb`."""
+        if iters < 1:
+            row = "# Iter.   Time (ms)    Eval. Reject.       Obj. Func.           Chi2   "
+            lin = "# ----------------------------------------------------------------------"
+            for k in range(len(self._eval_data['regul'])):
+                row += f"    Regul[{k}]"
+                lin +=  "------------"
+            row += "       Grad.       Step"
+            lin += "-----------------------"
+            print(row, file=output)
+            print(lin, file=output)
+        row = f"{iters:7d} {t*1e3:11.3f} {evals:7d} {rejects:7d} {fx:23.15e} {self._eval_data['chi2']:11.3e} "
+        for val in self._eval_data['regul']:
+            row += f"{val:11.3e} "
+        row += f"{pgnorm:11.3e} {alpha:11.3e}"
+        print(row, file=output)
 
     def criterion(self, x, noscale=False):
         '''self.eval(x, noscale=noscale)[0]
@@ -846,14 +804,14 @@ class CubeModel:
     # There's a bug in optm which requires verb > 0.
     def fit(self,x,
             lower=None, upper=None,
-            verb=1,
+            verb=1, printer=None,
             **vmlmb_kwargs):
         """Fit model to self.data.
 
         Wrapper around:
           (result, fx, gx, status) = vmlmb(self.eval, x,
                                            lower=lower, upper=upper,
-                                           verb=verb,
+                                           verb=verb, printer=printer 
                                            **vmlmb_kwargs)
 
         Arguments:
@@ -863,9 +821,17 @@ class CubeModel:
           also scaled back before being returned.
 
         Keyword arguments:
-        All keywords are passed untouched to vmlmb, except lower and
-        upper which are rescaled as x.
+        All keywords are passed untouched to vmlmb, except:
+        lower, upper -- array_like
+          passed to vmlmb after rescaling according to slef.poffset
+          and self.pscale.
+        printer -- callable
+          passed to vmlmb, if None, default to self.printer.
+
         """
+        if printer is None:
+            printer=self.printer
+
         if self.dbg:
             #pass
             print("DBG CALL fit func with x")
@@ -991,6 +957,7 @@ class CubeModel:
         (result, fx, gx, status) = vmlmb(self.eval, x,
                                          lower=lower, upper=upper,
                                          verb=verb,
+                                         printer=printer,
                                          **vmlmb_kwargs)
             # restore, use, pscale, poffset
         # denormalize?
