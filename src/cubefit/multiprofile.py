@@ -4,6 +4,7 @@ import numpy as np
 # import math
 # from astropy.modeling.functional_models import Moffat1D
 
+
 import matplotlib.pyplot as plt
 from scipy import optimize
 
@@ -158,68 +159,68 @@ def mp_func(x, a):
     profile, realX, npar, ncomp, equal, more = x
     # profile, realX, npar, ncomp, equal, more = mp_getx(x)
 
-    #profile = func set by mp_set
+    # profile = func set by mp_set
     print(f"a[0:npar] {a[0:npar]}")
-    y,gradc=profile(realX,a[0:npar])
+    y, gradc = profile(realX, a[0:npar])
 
-    #call jac
-    #gradc=jac(realX,*a[0:npar])
+    # call jac
+    # gradc=jac(realX,*a[0:npar])
     # TODO compute returncomps or ....
-    #if (returncomps is not None and returncomps is True):
+    # if (returncomps is not None and returncomps is True):
     #    comps=np.full((y.size),ncomp)
     #    #comps(,1)=y
     #    np.append(comps,y)
 
-    #if (deriv):
-    #jac call
-    grad=np.array((a.size),y)
-    #grad(..,1:npar)=gradc ??
-    grad[1:npar]=gradc
+    # if (deriv):
+    # jac call
+    grad = np.array((a.size), y)
+    # grad(..,1:npar)=gradc ??
+    grad[1:npar] = gradc
 
     if (equal is not None):
         for i in range(ncomp):
-            y2,jac2=profile(realX,a[i*npar+1:(i+1)*npar])
+            y2, jac2 = profile(realX, a[i*npar+1:(i+1)*npar])
             # jac2=profile(realX,a[i*npar+1:(i+1)*npar])
-            y=y+y2
+            y = y+y2
 
-            #if (returncomps):
+            # if (returncomps):
             #    comps[:,i+1]=y2
-            #if (deriv):
-            grad[:,i*npar+1:(i+1)*npar]=gradc
+            # if (deriv):
+            grad[:, i*npar+1:(i+1)*npar] = gradc
 
-        next=ncomp*npar+1
+        next = ncomp*npar+1
     else:
-        template=np.array(npar)
-        template[equal]=1
-        #where return tuple of array
-        ind=np.where(template == 0)[0]
-        template[equal]=a[equal]
-        np2=npar-equal.size
+        template = np.array(npar)
+        template[equal] = 1
+        # where return tuple of array
+        ind = np.where(template == 0)[0]
+        template[equal] = a[equal]
+        np2 = npar-equal.size
         for i in range(ncomp):
-            template[ind]=a[npar+(i-1)*np2+1:npar+i*np2]
-            #TODO on ecrase gradc ?
-            y2, gradc=profile(realX,*template)
-            #gradc=profile(realX,*template)
-            y=y+y2
-            #if (returncomps):
+            template[ind] = a[npar+(i-1)*np2+1:npar+i*np2]
+            # TODO on ecrase gradc ?
+            y2, gradc = profile(realX, *template)
+            # gradc=profile(realX,*template)
+            y = y+y2
+            # if (returncomps):
             #    comps[:,i+1]=y2
-            #if (deriv):
-            grad[:,npar+(i-1)*np2+1:npar+i*np2]=gradc[:,ind]
-            grad[:,equal] += gradc[:,equal]
-        next=npar+np2*(ncomp-1)+1
+            # if (deriv):
+            grad[:, npar+(i-1)*np2+1:npar+i*np2] = gradc[:, ind]
+            grad[:, equal] += gradc[:, equal]
+        next = npar+np2*(ncomp-1)+1
 
     if (more is not None):
         if (more[1] is None):
             more[1] = realX
-        #a(next:0) => a[-a.size-1+next:]
-        y += mp_func(more,a[-a.size-1+next:])
-        #if (deriv):
-        grad[:,next:a.size]=gradc
+        # a(next:0) => a[-a.size-1+next:]
+        y += mp_func(more, a[-a.size-1+next:])
+        # if (deriv):
+        grad[:, next:a.size] = gradc
 
-    return y,grad
+    return y, grad
 
 #
-#def mp_func(x, a, grad=None, comps=None, deriv=None, returncomps=None):
+# def mp_func(x, a, grad=None, comps=None, deriv=None, returncomps=None):
 #    npar = len(x)
 #    ncomp = len(a) // npar
 #    y = np.zeros_like(x)
@@ -237,7 +238,7 @@ def mp_func(x, a):
 #
 #    if not equal:
 #        for i in range(1, ncomp):
-#            y2, gradc = profile(realX, a[i*npar:(i+1)*npar], gradc, deriv=deriv)
+#            y2, gradc = profile(realX,a[i*npar:(i+1)*npar],gradc,deriv=deriv)
 #            y += y2
 #            if returncomps:
 #                comps[:, i] = y2
@@ -274,8 +275,11 @@ def mp_func(x, a):
 #    return y
 #
 
-#func mp_setx (profile=, npar=, ncomp=, realX=, more=, equal=) {
-def mp_setx (profile=None, npar=None, ncomp=None, realX=None, more=None, equal=None):
+# func mp_setx (profile=, npar=, ncomp=, realX=, more=, equal=) {
+
+
+def mp_setx(profile=None, npar=None, ncomp=None,
+            realX=None, more=None, equal=None):
     """
     DOCUMENT x=mp_setx(profile=myfunc, npar=npar, ncomp=ncomp,
                       realX=realX, more=more, equal=equal)
@@ -296,14 +300,14 @@ def mp_setx (profile=None, npar=None, ncomp=None, realX=None, more=None, equal=N
 
    SEE ALSO: mp_func, mp_seta, mp_getx, multiprofile
     """
-    #ncomp=ncomp?ncomp:1
+    # ncomp=ncomp?ncomp:1
     if ncomp is None:
-        ncomp=1
-    return  (profile, realX, npar, ncomp, equal, more)
+        ncomp = 1
+    return profile, realX, npar, ncomp, equal, more
 
 
-#TODO: do we need this func?
-#func mp_getx(x, &profile, &realX, &npar, &ncomp, &equal, &more) {
+# TODO: do we need this func?
+# func mp_getx(x, &profile, &realX, &npar, &ncomp, &equal, &more) {
 def mp_getx(x):
     '''
     /* DOCUMENT mp_getx, multiX, profile, realX, npar, ncomp, equal, more
@@ -320,12 +324,14 @@ def mp_getx(x):
 #  ncomp  =_car(x, 4);
 #  equal  =_car(x, 5);
 #  more   =_car(x, 6);
-    return x[0],x[1],x[2],x[3],x[4],x[5]
-#}
+    return x[0], x[1], x[2], x[3], x[4], x[5]
+# }
 
 
-#func mp_seta(params,equal=,more=,get=){
-def mp_seta(params,equal=None,more=None,get=None):
+# func mp_seta(params,equal=,more=,get=){
+
+
+def mp_seta(params, equal=None, more=None, get=None):
     """
     DOCUMENT multiprofileparams(params,equal=,more=,get=)
 
@@ -355,53 +361,55 @@ def mp_seta(params,equal=None,more=None,get=None):
     SEE ALSO: multiprofile, mp_func, lmfit, mp_setx
 
     """
-    sz=params.shape
-    ncomp=sz[0]
-    npars=sz[1]
-    npeq=np.asarray(equal).size
+    sz = params.shape
+    ncomp = sz[0]
+    npars = sz[1]
+    npeq = np.asarray(equal).size
 
     if (get is not None):
-        a=get
+        a = get
     else:
-        a=np.empty((ncomp*npars-(ncomp-1)*npeq+np.asarray(more).size))
+        a = np.empty((ncomp*npars-(ncomp-1)*npeq+np.asarray(more).size))
 
-    #TODO return index
-    #peigne=(indgen[ncomp]-1)*(npars-npeq)
+    # TODO return index
+    # peigne=(indgen[ncomp]-1)*(npars-npeq)
     # -1 ou pas ?
-    peigne=np.fromiter(range(0,ncomp),int)*(npars-npeq)
+    peigne = np.fromiter(range(0, ncomp), int)*(npars-npeq)
 
-    if (ncomp >1 and npeq >0):
+    if (ncomp > 1 and npeq > 0):
         peigne[1:] += npeq
 
     for p in range(npars):
-        if (np.where(equal==p)[0].size == 0):
+        if (np.where(equal == p)[0].size == 0):
             if (get is not None):
-                #params(,p)=a(p+peigne);
-                params[:,p]=a[p+peigne]
+                # params(,p)=a(p+peigne);
+                params[:, p] = a[p+peigne]
             else:
-                a[p+peigne]=params[:,p]
+                a[p+peigne] = params[:, p]
         else:
             if (get is not None):
-                params[:,p]=a[p]
+                params[:, p] = a[p]
             else:
-                a[p]=params[0,p]
+                a[p] = params[0, p]
 
-            if (ncomp >1):
+            if (ncomp > 1):
                 peigne[2:] -= 1
 
     if (more is not None):
         if (get is not None):
-            #more=a(1-numberof(more):);
-            more=a[1-more.size:]
-        #a(1-numberof(more):)=more;
-        a[1-more.size:]=more;
+            # more=a(1-numberof(more):);
+            more = a[1-more.size:]
+        # a(1-numberof(more):)=more;
+        a[1-more.size:] = more
 
-    return a;
+    return a
 
-#primitives
+# primitives
 
-#func linear(x,a,&grad,deriv=) {
-def linear(x,a,deriv=None):
+# func linear(x,a,&grad,deriv=) {
+
+
+def linear(x, a, deriv=None):
     """
      DOCUMENT linear(x,a)
          or linear(x,a,grad,deriv=1)
@@ -415,13 +423,15 @@ def linear(x,a,deriv=None):
     SEE ALSO: linear2d, poly_lmfit, lmfit, multiprofile
     """
     if (deriv):
-        grad=np.array([np.ones(x.shape), x])
+        grad = np.array([np.ones(x.shape), x])
 
-    #TODO: return grad ?
+    # TODO: return grad ?
     return a[1]+a[2]*x
 
-#func linear2d(xy,a,&grad,deriv=) {
-def linear2d(xy,a,deriv=None):
+# func linear2d(xy,a,&grad,deriv=) {
+
+
+def linear2d(xy, a, deriv=None):
     """
     DOCUMENT linear2d(xy,a)
          or linear2d(xy,a,grad,deriv=1)
@@ -436,17 +446,19 @@ def linear2d(xy,a,deriv=None):
     """
 
     if (deriv):
-        #grad=_(array(1.,dimsof(xy(..,1)),1), xy)
-        #TODO
-        #grad=_(array(1.,dimsof(xy(..,1)),1), xy)
+        # grad=_(array(1.,dimsof(xy(..,1)),1), xy)
+        # TODO
+        # grad=_(array(1.,dimsof(xy(..,1)),1), xy)
         print("TODO")
 
-    #TODO: return grad?
-    return a[1]+a[2]*xy[:,0]+a[3]*xy[:,1]
+    # TODO: return grad?
+    return a[1] + a[2]*xy[:, 0] + a[3]*xy[:, 1]
 
 
-#func poly_lmfit(x,a,&grad,deriv=) {
-def poly_lmfit(x,a,deriv=None):
+# func poly_lmfit(x,a,&grad,deriv=) {
+
+
+def poly_lmfit(x, a, deriv=None):
     """
     DOCUMENT poly_lmfit(x,a)
          or poly_lmfit(x,a,grad,deriv=1)
@@ -458,35 +470,37 @@ def poly_lmfit(x,a,deriv=None):
     SEE ALSO: poly, linear, lmfit, multiprofile
     """
 
-    degp1=a.size
+    degp1 = a.size
 
     if (deriv):
-        #grad=array(1.,dimsof(x),degp1);
-        grad=np.array[(1.,x.shape,degp1)]
-        #//grad(,1)=0; //useless
-        #grad(..,1)=1;
-        grad[:,0]=1
-        if (degp1>=1):
-            grad[:,1]=x
-        for n in np.arange(2,degp1):
-            grad[:,n+1]=x**n
+        # grad=array(1.,dimsof(x),degp1);
+        grad = np.array[(1., x.shape, degp1)]
+        # //grad(,1)=0; //useless
+        # grad(..,1)=1;
+        grad[:, 0] = 1
+        if (degp1 >= 1):
+            grad[:, 1] = x
+        for n in np.arange(2, degp1):
+            grad[:, n+1] = x**n
 
-    if (degp1==1):
-        #return np.array[a(1), dimsof(x)];
-        return np.full(x.shape,a[1])
+    if (degp1 == 1):
+        # return np.array[a(1), dimsof(x)];
+        return np.full(x.shape, a[1])
 
-    y=a[0]+a[1]*x
+    y = a[0] + a[1]*x
 
-    for n in np.arange(2,degp1):
-        y+=a[n]*x**(n-1);
+    for n in np.arange(2, degp1):
+        y += a[n]*x**(n-1)
 
-    return y;
+    return y
 
 # Fit doppler-shifted lines over a spectrum
 
 # TODO ol_setx doesn t touch to  realX=None, lines=None, positivity=None, !
 # func ol_setx(profile=, realX=, lines=, positivity=,
 # intensities=, fixedratio=) {
+
+
 def ol_setx(profile=None, realX=None, lines=None, positivity=None,
             intensities=None, fixedratio=None):
     '''Set up X parameter for offsetlines().
@@ -536,8 +550,10 @@ def ol_setx(profile=None, realX=None, lines=None, positivity=None,
     print(f"{ realX, lines, positivity, intensities, fixedratio}")
     return (profile, realX, lines, positivity, intensities, fixedratio)
 
-#func offsetlines(x,a,&grad,&comps,deriv=,returncomps=){
-def offsetlines(x,a,deriv=None,returncomps=None):
+# func offsetlines(x,a,&grad,&comps,deriv=,returncomps=){
+
+
+def offsetlines(x, a, deriv=None, returncomps=None):
     '''Fit several lines of identical shape over a spectrum, sharing a
      common displacement (for instance Doppler shift, if the
      wavelength range is short enough).
@@ -608,67 +624,67 @@ def offsetlines(x,a,deriv=None,returncomps=None):
       ol_setx, lmfit, multiprofile, moffat1d.
     '''
 
-    profile     = x[0]
-    realX       = x[1]
-    lines       = x[2]
-    positivity  = x[3]
+    profile = x[0]
+    realX = x[1]
+    lines = x[2]
+    positivity = x[3]
     intensities = x[4]
-    fixedratio  = x[5]
+    fixedratio = x[5]
 
     print(f"call offsetline with x {x}")
 
-    nlines=len(lines)
+    nlines = len(lines)
     print(f"nlines {nlines}")
-    npars=len(a)
+    npars = len(a)
     print(f"npars {npars}")
 
     if (not fixedratio):
         npars -= nlines-1
 
-    pars=np.empty((nlines,npars))
+    pars = np.empty((nlines, npars))
 
     if (fixedratio):
         print("fixedratio")
-        pars[:,0]=intensities
-        pars[:,1]=lines+a[1]
-        #pars(,3:)=a(-,3:);
-        pars[:,2]=a[3:]
+        pars[:, 0] = intensities
+        pars[:, 1] = lines+a[1]
+        # pars(,3:)=a(-,3:);
+        pars[:, 2] = a[np.newaxis, 2:]
     else:
-        pars[:,0]=a[0:nlines]
+        pars[:, 0] = a[0:nlines]
 
         if (positivity is not None):
-            ind=np.where(positivity==-1)[0]
+            ind = np.where(positivity == -1)
             if (ind.size):
-                pars[ind,1]=-abs(pars[ind,1])
+                pars[ind, 0] = -abs(pars[ind, 0])
 
-            ind=np.where(positivity==1)[0]
+            ind = np.where(positivity == 1)
             if (ind.size):
-                pars[ind,1]=abs(pars[ind,1])
+                pars[ind, 0] = abs(pars[ind, 0])
 
-        pars[:,1]=lines+a[nlines+1]
-        #pars[:,2]=a(-,nlines+2:);
-        pars[:,2]=a[:,nlines+2:]
+        pars[:, 1] = lines + a[nlines+1]
+        # pars[:,2]=a(-,nlines+2:);
+        pars[:, 2] = a[np.newaxis, nlines+2:]
 
-    a2=mp_seta(pars);
-    X=mp_setx(npar=npars,ncomp=nlines,realX=realX,profile=profile);
-    #TODO call jac sp=mp_func(X,a2, grad2, deriv=deriv);
-    sp,grad2=mp_func(X,a2)
+    a2 = mp_seta(pars)
+    X = mp_setx(npar=npars, ncomp=nlines, realX=realX, profile=profile)
+    # TODO call jac sp=mp_func(X,a2, grad2, deriv=deriv);
+    sp, grad2 = mp_func(X, a2)
 
-    #if (deriv):
+    # if (deriv):
     # peigne=(indgen(nlines)-1)*npars
-    peigne = np.fromiter(range(0,nlines),int)*npars
-    grad=np.array(sp.shape, a.size)
+    peigne = np.fromiter(range(0, nlines), int)*npars
+    grad = np.array(sp.shape, a.size)
     if (fixedratio):
-        grad[:,0]=sp
+        grad[:, 0] = sp
     else:
-        grad[:,0:nlines]=grad2[:,0+peigne]
+        grad[:, 0:nlines] = grad2[:, 0+peigne]
     if fixedratio:
-        offset=nlines-1
+        offset = nlines-1
     else:
-        offset=0
+        offset = 0
     for i in range(npars):
-        #TODO sum
-        #grad[:,i+offset]=grad2[:,peigne+i](:,sum)
+        # TODO sum
+        # grad[:,i+offset]=grad2[:,peigne+i](:,sum)
         print("sum")
 
     if (fixedratio):
@@ -724,6 +740,7 @@ def test_offsetlines():
     plt.figure()
     plt.plot(offsetlines(olx, A), x)
     plt.show()
+
 
 if __name__ == '__main__':
     test_offsetlines()
