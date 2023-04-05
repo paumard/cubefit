@@ -109,7 +109,7 @@ def moffat1d(x, *a):
     if nterms == 6:
         res += a[5] * x
     # TODO freestyle
-    tb=(x >= a[1])
+    tb = (x >= a[1])
     grad = np.zeros((x.size, nterms))
     grad[:, 0] = u1
     if np.max(u1b):
@@ -117,11 +117,11 @@ def moffat1d(x, *a):
     if np.max(u1b):
         grad[:, 2] = 2 * a[0] * a[3] * u4 / a[2] * u1b
     grad[:, 3] = -a[0] * np.log(u3) * u1
-    #if nterms > 4:
-    #    grad[:, 4] = 0
-    # TODO freestyle
-    if np.max(u1b):
-        grad[:, 4] =  2 * a[0] * (a[3] * u4 / a[4] * u1b * tb)
+    if nterms > 4:
+        #    grad[:, 4] = 0
+        # TODO freestyle
+        if np.max(u1b):
+            grad[:, 4] = 2 * a[0] * (a[3] * u4 / a[4] * u1b * tb)
     if nterms == 6:
         grad[:, 5] = x
     ind1 = np.where(grad > __moffat_gradmax)
@@ -311,7 +311,8 @@ def moffat1d_fit(y, x, w, guess=None, nterms=None, itmax=None):
             gamma = (x2 - x1) / 2.0
             alpha = (x1 + x2) / 2.0
             beta = 2.5
-            base = y1 - moffat1d(alpha, {'gamma': gamma, 'alpha': alpha, 'beta': beta})
+            base = y1 - moffat1d(alpha, {'gamma': gamma, 'alpha': alpha,
+                                 'beta': beta})
             guess.add('gamma', gamma)
             guess.add('alpha', alpha)
             guess.add('beta', beta)
@@ -341,10 +342,11 @@ def moffat1d_fit(y, x, w, guess=None, nterms=None, itmax=None):
 
     else:
         nterms = guess.size
-    result,req = optimize.curve_fit(moffat1d,x,y,guess, maxfev=itmax)
+    result, req = optimize.curve_fit(moffat1d, x, y, guess, maxfev=itmax)
     return result
 
-def asmoffat1d_fit(y,x,w,guess=None,nterms=None):
+
+def asmoffat1d_fit(y, x, w, guess=None, nterms=None):
     '''Fits an  assymetrical moffat  (see asmoffat1d) profile  on a data
     set using curve_fit  (see  curve_fit).
 
@@ -381,7 +383,7 @@ def asmoffat1d_fit(y,x,w,guess=None,nterms=None):
 #
 #    return mof
 #
-#def asmoffat1d_fit(y, x=None, w=None, guess=None, nterms=None):
+# def asmoffat1d_fit(y, x=None, w=None, guess=None, nterms=None):
     if x is None:
         x = np.arange(len(y))
 
@@ -436,10 +438,9 @@ def asmoffat1d_fit(y,x,w,guess=None,nterms=None):
     if w is None:
         w = np.ones_like(y)
 
-    result,req = optimize.curve_fit(asmoffat1d,x, y,guess)
+    result, req = optimize.curve_fit(asmoffat1d, x, y, guess)
 
-    return result,req
-
+    return result, req
 
 
 def moffat2d(xy, a, grad, deriv=None):
@@ -480,7 +481,7 @@ def moffat2d(xy, a, grad, deriv=None):
 # from chatgpt
 # import numpy as np
 #
-#def moffat2d(xy, a, deriv=True):
+# def moffat2d(xy, a, deriv=True):
     a = np.array(a, dtype=np.float64)
     npars = a.size
 
@@ -535,7 +536,7 @@ class WrapToCurveFit:
         A curvefit.lineprofiles profile.
     '''
     def __init__(self, profile):
-        self.profile=profile
+        self.profile = profile
 
     def __call__(self, xdata, *params):
         '''self(xdata, *params) -> self.profile(xdata, *params)[0]
@@ -546,7 +547,6 @@ class WrapToCurveFit:
         '''self.jac(xdata, *params) -> self.profile(xdata, *params)[1]
         '''
         return self.profile(xdata, *params)[1]
-
 
 
 def test_moffat():

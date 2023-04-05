@@ -102,7 +102,7 @@ from scipy import optimize
 
 
 # func mp_func(x,a,&grad,&comps,deriv=,returncomps=){
-def mp_func(x, a):
+def mp_func(x, *a):
     """A general  purpose routine to easily create  multicomponents profiles.
     The parameter scheme may  seem odd, but it is intended to  be easily used
     with lmfit. See "multiprofile" for an introduction.
@@ -161,7 +161,7 @@ def mp_func(x, a):
 
     # profile = func set by mp_set
     print(f"a[0:npar] {a[0:npar]}")
-    y, gradc = profile(realX, a[0:npar])
+    y, gradc = profile(realX, *a[0:npar])
 
     # call jac
     # gradc=jac(realX,*a[0:npar])
@@ -173,7 +173,8 @@ def mp_func(x, a):
 
     # if (deriv):
     # jac call
-    grad = np.array((a.size), y)
+    #grad = np.array((len(a)), y)
+    grad = np.full((len(a), y.size), y)
     # grad(..,1:npar)=gradc ??
     grad[1:npar] = gradc
 
@@ -668,7 +669,7 @@ def offsetlines(x, a, deriv=None, returncomps=None):
     a2 = mp_seta(pars)
     X = mp_setx(npar=npars, ncomp=nlines, realX=realX, profile=profile)
     # TODO call jac sp=mp_func(X,a2, grad2, deriv=deriv);
-    sp, grad2 = mp_func(X, a2)
+    sp, grad2 = mp_func(X, *a2)
 
     # if (deriv):
     # peigne=(indgen(nlines)-1)*npars
