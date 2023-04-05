@@ -19,7 +19,7 @@
 
 """Create and fit mock data with a single streamer
 
-The object is made of two thin filaments with velocity gradient. One
+The object is made of two thin filaments with velocityocity gradient. One
 is brighter than the other, with SNR above one only for the brighter
 filament (here SNR= peak/stddev). Line width is anti-correlated with
 line flux.
@@ -32,19 +32,20 @@ regularization until SNR~0.5 on this example with very crude initial
 guess.
 """
 
-
 import numpy as np
 from matplotlib import pyplot as plt
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel, markov, l1l2, RegularizationWithNumericalGradient
+from cubefit.cubemodel import CubeModel, markov,\
+                              l1l2, RegularizationWithNumericalGradient
 from cubefit.lineprofiles import gauss, ngauss
 
-l1l2_num=RegularizationWithNumericalGradient(l1l2)
+l1l2_num = RegularizationWithNumericalGradient(l1l2)
 
-DEBUG=False
+DEBUG = False
 
-#regularizations=[l1l2_num]
-regularizations=[None, markov, l1l2, l1l2_num]
+# regularizations=[l1l2_num]
+regularizations = [None, markov, l1l2, l1l2_num]
+
 
 def add_noise(cube, sigma=0.02):
     '''Add noise to data.
@@ -53,6 +54,12 @@ def add_noise(cube, sigma=0.02):
     intended for use in a reproduceable test suite. Don't use it for
     Monte-Carlo simulations or such.
 
+    Parameters
+    ----------
+    cube : ndarray
+    the cube on which the noise will be added
+    sigma : float64
+    the value / levelocity of noise
     '''
     # instanciate a random number generator with fixed seed
     # warning: changing the seed may affect the success of certain tests below
@@ -62,51 +69,54 @@ def add_noise(cube, sigma=0.02):
     tmp_cube = cube + rng.standard_normal(cube.shape) * psigma
     return tmp_cube
 
+
 # Shape of data cube (nx, ny, nz)
 nx, ny, nz = 16, 16, 21
 # Cube with x(=alpha) and y(=delta) coordinate of each data point
-alpha=np.linspace(-ny/2, ny/2, ny)[np.newaxis, :]*np.ones((nx, ny))
-delta=np.linspace(-nx/2, nx/2, nx)[:, np.newaxis]*np.ones((nx, ny))
+alpha = np.linspace(-ny/2, ny/2, ny)[np.newaxis, :]*np.ones((nx, ny))
+delta = np.linspace(-nx/2, nx/2, nx)[:, np.newaxis]*np.ones((nx, ny))
 # Build "true" parameter maps
-# internsity map
+# intensity map
 # velocity map
-v=2*(alpha+delta)
-#I=gauss(alpha+delta, 1, 0, 100)[0] \
-I=(v-np.min(v))/np.max(v)*2 \
-    * (  gauss(alpha-delta, 1, 4, 2)[0]
+velocity = 2*(alpha+delta)
+# I=gauss(alpha+delta, 1, 0, 100)[0] \
+intensity = (velocity-np.min(velocity))/np.max(velocity)*2 \
+    * (gauss(alpha-delta, 1, 4, 2)[0]
        + gauss(alpha-delta, 0.5, -4, 2)[0])
 # width map
-dv=(2-I/np.max(I))*5
+dvelocity = (2-intensity/np.max(intensity))*5
 # display maps if DEBUG is True
 
 
 # Model we want to test
-w0=2.166120e-6
-dw=5e-11
-Dw=dw*(nz-1)
+w0 = 2.166120e-6
+dw = 5e-11
+Dw = dw*(nz-1)
 profile = DopplerLines(w0, profile=ngauss)
 waxis = np.linspace(w0-Dw/2, w0+Dw/2, nz)
-model_none = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
+model_none = CubeModel(profile=profile, profile_xdata=waxis,
+                       regularization=None)
 vaxis = (waxis-w0)/w0*profile.light_speed
 
 # Parameters for "true" cube. Can be 1D or 3D.
-xreal=np.transpose(np.asarray([I, v, dv]), (1, 2, 0))
-reality=model_none.model(xreal)
+xreal = np.transpose(np.asarray([intensity, velocity, dvelocity]), (1, 2, 0))
+reality = model_none.model(xreal)
 
 # Sigma of errors to add to "true" cube to get "observational" data
 sigma = 0.2*np.max(reality)
-snr=np.max(reality, axis=2)/sigma
+snr = np.max(reality, axis=2)/sigma
 data = add_noise(reality, sigma)
 weights = np.full(data.shape, 1/sigma)
 
 # Display "truth"
-imshow_kwds=[{"vmin": np.min(I),
-              "vmax": np.max(I)},
-             {"vmin": np.min(v),
-              "vmax": np.max(v)},
-             {"vmin": np.min(dv),
-              "vmax": np.max(dv)}]
-model_none.view_data["imshow_kwds"]=imshow_kwds
+imshow_kwds = [{"vmin": np.min(intensity),
+               "vmax": np.max(intensity)},
+               {"vmin": np.min(velocity),
+               "vmax": np.max(velocity)},
+               {"vmin": np.min(dvelocity),
+               "vmax": np.max(dvelocity)}]
+model_none.view_data["imshow_kwds"] = imshow_kwds
+
 
 def view_more(fig, axes):
     fig.suptitle("Truth")
@@ -116,13 +126,16 @@ def view_more(fig, axes):
     axes[0].contour(snr, [0.5, 1])
     axes[1].contour(snr, [0.5, 1])
     axes[2].contour(snr, [0.5, 1])
-model_none.view_more=view_more
+
+
+model_none.view_more = view_more
 model_none.view(xreal, noscale=True)
-model_none.view_data["fig"]=None # detach figure
+model_none.view_data["fig"] = None  # detach figure
 
 # Initial guess for fit. Can be 1D or 3D.
-xtest_1d=[np.max(I), 0., np.std(v)]
+xtest_1d = [np.max(intensity), 0., np.std(velocity)]
 xtest = np.full((nx, ny, len(xtest_1d)), xtest_1d)
+
 
 def view_more(fig, axes):
     fig.suptitle("Initial guess")
@@ -132,18 +145,26 @@ def view_more(fig, axes):
     axes[0].contour(snr, [0.5, 1])
     axes[1].contour(snr, [0.5, 1])
     axes[2].contour(snr, [0.5, 1])
-model_none.view_more=view_more
+
+
+model_none.view_more = view_more
 model_none.view(xtest, noscale=True)
-model_none.view_data["fig"]=None # detach figure
+model_none.view_data["fig"] = None  # detach figure
 
 if DEBUG:
-    fig=plt.figure()
-    plt.plot((waxis-w0)/w0*profile.light_speed, reality[6,10, :], label="bright spectrum (true)")
-    plt.plot((waxis-w0)/w0*profile.light_speed, data[6,10,:], label="bright spectrum (data)")
-    plt.plot((waxis-w0)/w0*profile.light_speed, reality[10,6,:], label="faint spectrum (true)")
-    plt.plot((waxis-w0)/w0*profile.light_speed, data[10,6,:], label="faint spectrum (data)")
-    plt.plot((waxis-w0)/w0*profile.light_speed, profile(waxis, *xtest_1d)[0], label="first guess")
-    plt.plot((waxis-w0)/w0*profile.light_speed, np.sum(np.sum(reality, axis=1), axis=0)/nx,
+    fig = plt.figure()
+    plt.plot((waxis-w0)/w0*profile.light_speed, reality[6, 10, :],
+             label="bright spectrum (true)")
+    plt.plot((waxis-w0)/w0*profile.light_speed, data[6, 10, :],
+             label="bright spectrum (data)")
+    plt.plot((waxis-w0)/w0*profile.light_speed, reality[10, 6, :],
+             label="faint spectrum (true)")
+    plt.plot((waxis-w0)/w0*profile.light_speed, data[10, 6, :],
+             label="faint spectrum (data)")
+    plt.plot((waxis-w0)/w0*profile.light_speed, profile(waxis, *xtest_1d)[0],
+             label="first guess")
+    plt.plot((waxis-w0)/w0*profile.light_speed,
+             np.sum(np.sum(reality, axis=1), axis=0)/nx,
              label=f"integral spectrum/{nx}")
     plt.legend()
     fig.show()
@@ -163,23 +184,24 @@ if None in regularizations:
         axes[1].contour(snr, [0.5, 1])
         axes[2].contour(snr, [0.5, 1])
 
-    model_none.view_more=view_more
-    model_none.view_data["imshow_kwds"]=imshow_kwds
+    model_none.view_more = view_more
+    model_none.view_data["imshow_kwds"] = imshow_kwds
 
     res_x_none, fx_none, gx_none, status_none = model_none.fit(xtest)
 
-
     # Compute model cube
-    model_none_cube=model_none.model(res_x_none)
+    model_none_cube = model_none.model(res_x_none)
 
-    chi2=np.sum(((data-model_none_cube)/sigma)**2)/(data.size-res_x_none.size)
-    print(f"reduced chi2 == {chi2}")
+    chi2 = np.sum(((data - model_none_cube)/sigma)**2)\
+        / (data.size - res_x_none.size)
+    print(f"reduced chi2  =  =  {chi2}")
 
     def plot3(i, j):
-        fig=plt.figure()
+        fig = plt.figure()
         plt.plot(vaxis, reality[i, j, :], label=f"true spectrum at {j} {i}")
         plt.plot(vaxis, data[i, j, :], label=f"data spectrum at {j} {i}")
-        plt.plot(vaxis, model_none_cube[i, j, :], label=f"fitted spectrum at {j} {i}")
+        plt.plot(vaxis, model_none_cube[i, j, :],
+                 label=f"fitted spectrum at {j} {i}")
         plt.legend()
         fig.show()
 
@@ -191,13 +213,15 @@ if None in regularizations:
 
 if markov in regularizations:
     # Do fit with regularization
-    model_markov = CubeModel(profile=profile, profile_xdata=waxis, regularization=markov)
+    model_markov = CubeModel(profile=profile, profile_xdata=waxis,
+                             regularization=markov)
     model_markov.data = data
     model_markov.weight = weights
-    weight_markov=[2, 0.1, 0.1]
-    mu_markov    =[1., 1., 2.]
-    model_markov.delta=np.sqrt(np.asarray(mu_markov)*np.asarray(weight_markov))
-    model_markov.scale=np.asarray(mu_markov)/model_markov.delta
+    weight_markov = [2, 0.1, 0.1]
+    mu_markov = [1., 1., 2.]
+    model_markov.delta = np.sqrt(np.asarray(mu_markov)
+                                 * np.asarray(weight_markov))
+    model_markov.scale = np.asarray(mu_markov)/model_markov.delta
 
     def view_more(fig, axes):
         fig.suptitle("markov fit")
@@ -208,26 +232,29 @@ if markov in regularizations:
         axes[1].contour(snr, [0.5, 1])
         axes[2].contour(snr, [0.5, 1])
 
-    model_markov.view_more=view_more
-    model_markov.view_data["imshow_kwds"]=imshow_kwds
+    model_markov.view_more = view_more
+    model_markov.view_data["imshow_kwds"] = imshow_kwds
 
-    res_x_markov, fx_markov, gx_markov, status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
+    res_x_markov, fx_markov, gx_markov, \
+        status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
 
     # Compute model cube
-    model_markov_cube=model_markov.model(res_x_markov)
+    model_markov_cube = model_markov.model(res_x_markov)
 
-    chi2=np.sum(((data-model_markov_cube)/sigma)**2)/(data.size-res_x_markov.size)
+    chi2 = np.sum(((data-model_markov_cube)/sigma)**2)\
+        / (data.size-res_x_markov.size)
     print(f"reduced chi2 == {chi2}")
 
 if l1l2 in regularizations:
     # Do fit with regularization
-    model_l1l2 = CubeModel(profile=profile, profile_xdata=waxis, regularization=l1l2)
+    model_l1l2 = CubeModel(profile=profile, profile_xdata=waxis,
+                           regularization=l1l2)
     model_l1l2.data = data
     model_l1l2.weight = weights
-    weight_l1l2=[2, 0.1, 0.1]
-    mu_l1l2    =[1., 1., 2.]
-    model_l1l2.delta=np.sqrt(np.asarray(mu_l1l2)*np.asarray(weight_l1l2))
-    model_l1l2.scale=np.asarray(mu_l1l2)/model_l1l2.delta
+    weight_l1l2 = [2, 0.1, 0.1]
+    mu_l1l2 = [1., 1., 2.]
+    model_l1l2.delta = np.sqrt(np.asarray(mu_l1l2)*np.asarray(weight_l1l2))
+    model_l1l2.scale = np.asarray(mu_l1l2)/model_l1l2.delta
 
     def view_more(fig, axes):
         fig.suptitle("l1l2 fit")
@@ -238,27 +265,29 @@ if l1l2 in regularizations:
         axes[1].contour(snr, [0.5, 1])
         axes[2].contour(snr, [0.5, 1])
 
-    model_l1l2.view_more=view_more
-    model_l1l2.view_data["imshow_kwds"]=imshow_kwds
+    model_l1l2.view_more = view_more
+    model_l1l2.view_data["imshow_kwds"] = imshow_kwds
 
     res_x_l1l2, fx_l1l2, gx_l1l2, status_l1l2 = model_l1l2.fit(xtest)
 
-
     # Compute model cube
-    model_l1l2_cube=model_l1l2.model(res_x_l1l2)
+    model_l1l2_cube = model_l1l2.model(res_x_l1l2)
 
-    chi2=np.sum(((data-model_l1l2_cube)/sigma)**2)/(data.size-res_x_l1l2.size)
+    chi2 = np.sum(((data-model_l1l2_cube)/sigma)**2)\
+        / (data.size-res_x_l1l2.size)
     print(f"reduced chi2 == {chi2}")
 
 if l1l2_num in regularizations:
     # Do fit with regularization
-    model_l1l2_num = CubeModel(profile=profile, profile_xdata=waxis, regularization=l1l2_num)
+    model_l1l2_num = CubeModel(profile=profile, profile_xdata=waxis,
+                               regularization=l1l2_num)
     model_l1l2_num.data = data
     model_l1l2_num.weight = weights
-    weight_l1l2_num=[2, 0.1, 0.1]
-    mu_l1l2_num    =[1., 1., 2.]
-    model_l1l2_num.delta=np.sqrt(np.asarray(mu_l1l2_num)*np.asarray(weight_l1l2_num))
-    model_l1l2_num.scale=np.asarray(mu_l1l2_num)/model_l1l2_num.delta
+    weight_l1l2_num = [2, 0.1, 0.1]
+    mu_l1l2_num = [1., 1., 2.]
+    model_l1l2_num.delta = np.sqrt(np.asarray(mu_l1l2_num)
+                                   * np.asarray(weight_l1l2_num))
+    model_l1l2_num.scale = np.asarray(mu_l1l2_num)/model_l1l2_num.delta
 
     def view_more(fig, axes):
         fig.suptitle("l1l2_num fit")
@@ -269,17 +298,18 @@ if l1l2_num in regularizations:
         axes[1].contour(snr, [0.5, 1])
         axes[2].contour(snr, [0.5, 1])
 
-    model_l1l2_num.view_more=view_more
-    model_l1l2_num.view_data["imshow_kwds"]=imshow_kwds
+    model_l1l2_num.view_more = view_more
+    model_l1l2_num.view_data["imshow_kwds"] = imshow_kwds
 
-    res_x_l1l2_num, fx_l1l2_num, gx_l1l2_num, status_l1l2_num = model_l1l2_num.fit(xtest)
-
+    res_x_l1l2_num, fx_l1l2_num, gx_l1l2_num,\
+        status_l1l2_num = model_l1l2_num.fit(xtest)
 
     # Compute model cube
-    model_l1l2_num_cube=model_l1l2_num.model(res_x_l1l2_num)
+    model_l1l2_num_cube = model_l1l2_num.model(res_x_l1l2_num)
 
-    chi2=np.sum(((data-model_l1l2_num_cube)/sigma)**2)/(data.size-res_x_l1l2_num.size)
-    print(f"reduced chi2 == {chi2}")
+    chi2 = np.sum(((data-model_l1l2_num_cube)/sigma)**2)\
+        / (data.size-res_x_l1l2_num.size)
+    print(f"reduced chi2  =  =  {chi2}")
 
 # Ensure windows don't close automatically
 plt.show()
