@@ -18,9 +18,12 @@
 
 # import sys
 import os
-from .common import *
+import unittest
+from astropy.io import fits
+import numpy as np
+# from .common import *
 from cubefit.dopplerlines import DopplerLines
-from cubefit.cubemodel import CubeModel , markov, l1l2
+from cubefit.cubemodel import CubeModel, markov, l1l2
 from cubefit.lineprofiles import gauss, ngauss
 
 DEBUG = os.environ.get("TEST_CUBEMODEL_DEBUG")
@@ -48,32 +51,30 @@ def open_fits(cube, cname):
     print(cube.shape)
 
 
-
 def print_array_info(array):
     print(f'{array=}'.split('=')[0])
-    print(f"array is a ")
+    print("array is a ")
     print(type(array))
     print(array.shape)
     print(array.ndim)
     print("---")
 
 
-
-
 def print_array_slice(myarray):
-    size=min(myarray.shape)//2
+    size = min(myarray.shape)//2
     print(f"myarray size-1 {myarray[size-1,size-1,:]}")
     print(f"myarray size {myarray[size,size,:]}")
     print(f"myarray size+1 {myarray[size+1,size+1,:]}")
 
 
 def plot_array_slice(myarray):
-    #print(myarray.shape)
-    size=min(myarray.shape)//2
+    # print(myarray.shape)
+    size = min(myarray.shape)//2
     plt.figure()
     plt.imshow(myarray[size, size, :], cmap='gray')
     plt.colorbar()
     plt.show()
+
 
 def add_noise(cube, sigma=0.02):
     '''Add noise to data.
@@ -103,7 +104,7 @@ class TestCubemodel(unittest.TestCase):
             diftol = diflim*reltol
         d = x.shape
         if np.isscalar(epsilon):
-            epsilon=np.ones(d[2])*epsilon
+            epsilon = np.ones(d[2])*epsilon
         g = np.zeros(d)
         f0, g0 = f(x, **kwargs)
         for k in range(d[2]):
@@ -111,29 +112,31 @@ class TestCubemodel(unittest.TestCase):
                 for i in range(d[0]):
                     temp = np.copy(x)
                     temp[i, j, k] += 0.5*epsilon[k]
-                    fp, gp=f(temp, **kwargs)
+                    fp, gp = f(temp, **kwargs)
                     temp[i, j, k] -= epsilon[k]
-                    fm, gm=f(temp, **kwargs)
+                    fm, gm = f(temp, **kwargs)
                     # this is (f(x+h/2)-f(x-h/2))/h
                     g[i, j, k] = (fp-fm)/epsilon[k]
         absval = 0.5*np.abs(g+g0)
         difval = np.abs(g-g0)
-        cond = absval>diflim
+        cond = absval > diflim
         if np.any(cond):
             maxrel = np.max(difval[cond]/absval[cond])
-            self.assertTrue(maxrel < reltol, f"Gradient is not within relative tolerance (max: {maxrel}, reltol: {reltol}, diflim: {diflim})")
-        cond = absval<=diflim
+            self.assertTrue(maxrel < reltol, f"Gradient is not within relative\
+            tolerance (max: {maxrel}, reltol: {reltol}, diflim: {diflim})")
+        cond = absval <= diflim
         if np.any(cond):
-            maxdif=np.max(difval[cond])
-            self.assertTrue(maxdif < diftol, f"Gradient is not within absolute tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
-
+            maxdif = np.max(difval[cond])
+            self.assertTrue(maxdif < diftol, f"Gradient is not within absolute\
+            tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
 
     def test_cubemodel_eval_no_data_raises(self):
         '''Check that CubeModel.eval raises an error when self.data is not set
         '''
-        model=CubeModel()
-        x="whatever"
-        with self.assertRaises(ValueError, msg="CubeModel.eval() should raise a Value Error when data is None"):
+        model = CubeModel()
+        x = "whatever"
+        with self.assertRaises(ValueError, msg="CubeModel.eval() \
+        should raise a Value Error when data is None"):
             model.eval(x)
 
     def test_cubemodel_gradient(self):
@@ -147,7 +150,8 @@ class TestCubemodel(unittest.TestCase):
         waxis = np.linspace(2.15e-6, 2.175e-6, nz)
 
         profile = DopplerLines(2.166120e-6, profile=gauss)
-        model = CubeModel(profile=profile, profile_xdata=waxis, regularization=None)
+        model = CubeModel(profile=profile, profile_xdata=waxis,
+                          regularization=None)
         cube_real = model.model(xreal)
         model.data = cube_real
 
@@ -157,7 +161,8 @@ class TestCubemodel(unittest.TestCase):
         self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.],
                             diftol=1e-2)
 
-    def helper_cubemodel_fit(self, model, shape, xreal, xtest, sigma, **fit_kwargs):
+    def helper_cubemodel_fit(self, model, shape, xreal, xtest, sigma,
+                             **fit_kwargs):
         """Helper for CubeModel.fit tests
 
         This does the following:
@@ -243,16 +248,16 @@ class TestCubemodel(unittest.TestCase):
         data = add_noise(cube_real, sigma)
 
         # Attach data to model object
-        model.data=data
+        model.data = data
 
         # perform fit
         fitres = model.fit(xtest, **fit_kwargs)
 
         # build best model cube
-        res_x=fitres[0]
-        model_cube=model.model(res_x)
+        res_x = fitres[0]
+        model_cube = model.model(res_x)
         # compute reduced chi2
-        chi2=np.sum(((data-model_cube)/sigma)**2)/(data.size-res_x.size)
+        chi2 = np.sum(((data-model_cube)/sigma)**2)/(data.size-res_x.size)
 
         # return chi2 and fit results
         return (chi2, fitres)
@@ -263,17 +268,19 @@ class TestCubemodel(unittest.TestCase):
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = (5, 5, 433)
         # Model we want to test
-        model = CubeModel(profile=gauss, profile_xdata=np.linspace(-10,10,nz),
+        model = CubeModel(profile=gauss,
+                          profile_xdata=np.linspace(-10, 10, nz),
                           regularization=None, framedelay=-1)
         # Parameters for "true" cube. Can be 1D or 3D.
-        xreal_1d = (1,1, 0.5, 0.5,0.1)
+        xreal_1d = (1, 1, 0.5, 0.5, 0.1)
         # Initial guess for fit. Can be 1D or 3D.
         xtest_1d = xreal_1d
         # Sigma of errors to add to "true" cube to get "observational" data
-        sigma=0.02
+        sigma = 0.02
 
         # Call helper
-        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz), xreal_1d, xtest_1d, sigma)
+        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz),
+                                                  xreal_1d, xtest_1d, sigma)
 
         # At this stage, perform some verifications on chi2 and/testres.
         # For instance: raise error is chi2 not close to 1
@@ -292,7 +299,7 @@ class TestCubemodel(unittest.TestCase):
                           regularization=None, framedelay=-1)
 
         # Parameters for "true" cube. Can be 1D or 3D.
-        xreal_1d=(1.2, 0.5, 25., 100)
+        xreal_1d = (1.2, 0.5, 25., 100)
 
         # Initial guess for fit. Can be 1D or 3D.
         xtest_1d = (1.1, 1., 25., 100)
@@ -301,7 +308,10 @@ class TestCubemodel(unittest.TestCase):
         sigma = 0.2
 
         # Call helper
-        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz), xreal_1d, xtest_1d, sigma, fmin=0.)
+        chi2, testres = self.helper_cubemodel_fit(model,
+                                                  (nx, ny, nz),
+                                                  xreal_1d, xtest_1d,
+                                                  sigma, fmin=0.)
 
         # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
@@ -320,7 +330,7 @@ class TestCubemodel(unittest.TestCase):
                           regularization=None, framedelay=-1)
 
         # Parameters for "true" cube. Can be 1D or 3D.
-        xreal_1d=(1.2, 0.5, 25., 100)
+        xreal_1d = (1.2, 0.5, 25., 100)
 
         # Initial guess for fit. Can be 1D or 3D.
         xtest_1d = xreal_1d
@@ -329,7 +339,9 @@ class TestCubemodel(unittest.TestCase):
         sigma = 0.5
 
         # Call helper
-        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz), xreal_1d, xtest_1d, sigma)
+        chi2, testres = self.helper_cubemodel_fit(model,
+                                                  (nx, ny, nz),
+                                                  xreal_1d, xtest_1d, sigma)
 
         # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
@@ -347,11 +359,12 @@ class TestCubemodel(unittest.TestCase):
 
         waxis = np.linspace(2.16e-6, 2.18e-6, nz)
 
-        poffset=np.asarray([1., 2.17e-6, 2e-10])
-        pscale =np.asarray([1e-1, 1e-10, 1e-11])
+        poffset = np.asarray([1., 2.17e-6, 2e-10])
+        pscale = np.asarray([1e-1, 1e-10, 1e-11])
         # Also test that auto-broadcasting works like explicit
-        xreal_normed=(xreal-poffset)/pscale
-        xtest_normed=(xtest-poffset[np.newaxis, np.newaxis, :])/pscale[np.newaxis, np.newaxis, :]
+        xreal_normed = (xreal - poffset) / pscale
+        xtest_normed = (xtest - poffset[np.newaxis, np.newaxis, :])\
+            / pscale[np.newaxis, np.newaxis, :]
 
         profile = gauss
         model = CubeModel(profile=profile, profile_xdata=waxis,
@@ -359,70 +372,76 @@ class TestCubemodel(unittest.TestCase):
         model.data = model.model(xreal)
         val = model.criterion(xtest)
 
-
         # Check that model() behaves correctly with pscale and poffset not set
-        self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
-        self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=False)))), 0)
+        self.assertEqual(
+            (np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
+        self.assertEqual(
+            (np.max(np.abs(model.data-model.model(xreal, noscale=False)))), 0)
 
         # Set pscale and poffset
-        model.pscale  = pscale
+        model.pscale = pscale
         model.poffset = poffset
 
         # Check that eval() behaves correctly with pscale and poffset set
         self.assertEqual(model.criterion(xreal, noscale=True), 0,
-                          "Criterion for xreal_normed should be 0")
+                         "Criterion for xreal_normed should be 0")
         self.assertEqual(model.criterion(xreal_normed), 0,
-                          "Criterion for xreal_normed should be 0")
+                         "Criterion for xreal_normed should be 0")
         self.assertEqual(model.criterion(xtest, noscale=True), val,
-                          f"Criterion for xtest_normed should be {val}")
+                         f"Criterion for xtest_normed should be {val}")
         self.assertEqual(model.criterion(xtest_normed), val,
-                          f"Criterion for xtest_normed should be {val}")
+                         f"Criterion for xtest_normed should be {val}")
 
         self.check_gradient(model.eval, xtest_normed)
 
         # Check that model() behaves correctly with pscale and poffset set
-        self.assertEqual((np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
-        self.assertEqual((np.max(np.abs(model.data-model.model(xreal_normed, noscale=False)))), 0)
+        self.assertEqual(
+            (np.max(np.abs(model.data-model.model(xreal, noscale=True)))), 0)
+        self.assertEqual(
+            (np.max(
+               np.abs(model.data-model.model(xreal_normed, noscale=False)))), 0
+               )
 
         # Create a non-trivial ptweak function
         def ptweak(params):
             # Derivatives for all unchanged parameters and parameters
             # changed by a constant amount is 1. So let's initialize
             # all derivatives to 1.
-            derivs=np.ones(params.shape)
-            params[:, : ,0] += 1.
+            derivs = np.ones(params.shape)
+            params[:, :, 0] += 1.
             params[:, :, 2] *= 1.05
             # Only derivs[:, :, 2] is not 1 in this example.
             derivs[:, :, 2] = 1.05
             return params, derivs
 
-        model.ptweak=ptweak
+        model.ptweak = ptweak
 
         # Modify input accordingly
-        xintrinsic=xtest.copy()
+        xintrinsic = xtest.copy()
         xintrinsic[:, :, 0] -= 1
         xintrinsic[:, :, 2] /= 1.05
 
         # ptweak may modify xx in place
-        xx=xintrinsic.copy()
+        xx = xintrinsic.copy()
         xx, derivs = ptweak(xx)
         self.assertAlmostEqual(np.max(np.abs(xx-xtest)), 0,
                                msg="Something's wrong with ptweak")
 
-        xintrinsic_normed=model.normalize_parameters(xintrinsic)
+        xintrinsic_normed = model.normalize_parameters(xintrinsic)
         self.check_gradient(model.eval, xintrinsic_normed)
 
-        model.poffset=None
-        model.pscale=None
+        model.poffset = None
+        model.pscale = None
         self.check_gradient(model.eval, xintrinsic, noscale=True,
                             epsilon=[1e-6, 1e-12, 1e-12])
 
-        xintrinsic=xreal.copy()
+        xintrinsic = xreal.copy()
         xintrinsic[:, :, 0] -= 1
         xintrinsic[:, :, 2] /= 1.05
-        self.assertAlmostEqual((np.max(np.abs(model.data
-                                              -model.model(xintrinsic,
-                                                           noscale=True)))), 0)
+        self.assertAlmostEqual(
+            (np.max(
+                np.abs(model.data - model.model(xintrinsic, noscale=True)))),
+            0)
 
     def test_cubemodel_regularization(self):
         '''Check that CubeModel.regularization succeeds
@@ -433,7 +452,7 @@ class TestCubemodel(unittest.TestCase):
 
         # test for uniform image
         # create a uniform image (2D array)
-        img_uniform = np.full((nx,ny),50)
+        img_uniform = np.full((nx, ny), 50)
         crit_m, _ = markov(img_uniform)
         crit_l1l2, _ = l1l2(img_uniform)
         # print(f"crit uni {crit}")
@@ -459,7 +478,7 @@ class TestCubemodel(unittest.TestCase):
                          for a uniform image should be 0")
 
         # test for spiked image
-        img_spike = np.full((nx,ny),50)
+        img_spike = np.full((nx, ny), 50)
         img_spike[4:6, 4:6] = 100
         crit_m_spike, _ = markov(img_spike)
         crit_l1l2_spike, _ = l1l2(img_spike)
@@ -469,11 +488,11 @@ class TestCubemodel(unittest.TestCase):
         self.assertGreater(crit_l1l2_spike, 100,
                            "l1l2 regularization criterion \
                            for a spike image should be high")
-       #
+        #
         # print(f"crit spike {crit_spike}")
         # print(f"grad {grad}")
         # test for random image
-        img_rand = np.random.normal(0, 1, (nx,ny))
+        img_rand = np.random.normal(0, 1, (nx, ny))
         crit_m_rand, _ = markov(img_rand)
         crit_l1l2_rand, _ = l1l2(img_rand)
         self.assertLess(crit_m_rand, crit_m_spike,
@@ -487,7 +506,7 @@ class TestCubemodel(unittest.TestCase):
 
         # print(f"crit rand {crit_rand}")
         # print(f"grad {grad}")
-        img_pattern = np.zeros((nx,ny))
+        img_pattern = np.zeros((nx, ny))
         img_pattern[5:9] = 1
         crit_m_pattern, _ = markov(img_pattern)
         crit_l1l2_pattern, _ = l1l2(img_pattern)
@@ -499,7 +518,6 @@ class TestCubemodel(unittest.TestCase):
                         "l1l2 regularization criterion \
                         for an image with geometric pattern should be \
                         less than a for a random one")
-
 
         # print(f"crit bicol {crit_pattern}")
         # print(f"grad {grad}")

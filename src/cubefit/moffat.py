@@ -439,7 +439,7 @@ def asmoffat1d_fit(y, x, w, guess=None, nterms=None):
     return result, req
 
 
-def moffat2d(xy, a, grad, deriv=None):
+def moffat2d(xy, *a):
     '''
     /* DOCUMENT moffat2d(xy,a)
 
@@ -506,22 +506,19 @@ def moffat2d(xy, a, grad, deriv=None):
     u1 = u3**-np.abs(b)
     u1b = u3**-np.abs(b + 1)
     mof = I0 * u1
-    if deriv:
-        grad = np.zeros((xy.shape[0], npars), dtype=np.float64)
-        grad[:, 0] = u1
-        grad[:, 1] = 2.0 * I0 * b * dx1 * X * u1b
-        grad[:, 2] = 2.0 * I0 * b * dy1 * Y * u1b
-        grad[:, 3] = grad[:, 1] * X
-        if npars >= 6:
-            grad[:, 4] = grad[:, 2] * Y
-        else:
-            grad[:, 3] += grad[:, 2] * Y
-        grad[:, -1] = -np.log(u3) * mof
-        grad[:, 0] = 2.0 * b * I0 * (dx * dy1 - dy * dx1) * X * Y * u1b
-
-        return mof, grad
+    grad = np.zeros((xy.shape[0], npars), dtype=np.float64)
+    grad[:, 0] = u1
+    grad[:, 1] = 2.0 * I0 * b * dx1 * X * u1b
+    grad[:, 2] = 2.0 * I0 * b * dy1 * Y * u1b
+    grad[:, 3] = grad[:, 1] * X
+    if npars >= 6:
+        grad[:, 4] = grad[:, 2] * Y
     else:
-        return mof
+        grad[:, 3] += grad[:, 2] * Y
+    grad[:, -1] = -np.log(u3) * mof
+    grad[:, 0] = 2.0 * b * I0 * (dx * dy1 - dy * dx1) * X * Y * u1b
+
+    return mof, grad
 
 
 class WrapToCurveFit:
