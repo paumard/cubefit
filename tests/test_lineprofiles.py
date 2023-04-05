@@ -55,9 +55,13 @@ class TestAstropyGauss(Test1DModel):
         super(TestAstropyGauss, self).__init__(*args, **kwargs)
         import astropy.modeling
         self.gauss=WrapFromAstropy(astropy.modeling.functional_models.Gaussian1D)
+        g=astropy.modeling.functional_models.Gaussian1D()
+        l=astropy.modeling.functional_models.Linear1D()
+        self.gaussl=WrapFromAstropy(g+l)
 
     def test_gauss(self):
         gauss=self.gauss
+        gaussl=self.gaussl
         # Test Gaussian for a few known values
         params=(1., 0., 1.)
         self.assertAlmostEqual(gauss(0., *params)[0], 1)
@@ -74,6 +78,16 @@ class TestAstropyGauss(Test1DModel):
         self.assertAlmostEqual(gauss(2., *params)[0], np.exp(-0.5))
         self.assertAlmostEqual(gauss(3., *params)[0], np.exp(-2))
         self.assertAlmostEqual(gauss(-1., *params)[0], np.exp(-2))
+        params=(1., 0., 1., 0, 2)
+        self.assertAlmostEqual(gaussl(0., *params)[0], 1+2)
+        self.assertAlmostEqual(gaussl(1., *params)[0], np.exp(-0.5)+2)
+        self.assertAlmostEqual(gaussl(2., *params)[0], np.exp(-2)+2)
+        self.assertAlmostEqual(gaussl(-2., *params)[0], np.exp(-2)+2)
+        params=(1., 0., 1., 2, 2)
+        self.assertAlmostEqual(gaussl(0., *params)[0], 1+2)
+        self.assertAlmostEqual(gaussl(1., *params)[0], np.exp(-0.5)+2+2)
+        self.assertAlmostEqual(gaussl(2., *params)[0], np.exp(-2)+2+4)
+        self.assertAlmostEqual(gaussl(-2., *params)[0], np.exp(-2)+2-4)
         params=(1., 0., 2.)
         self.assertAlmostEqual(gauss(0., *params)[0], 1)
         self.assertAlmostEqual(gauss(2., *params)[0], np.exp(-0.5))
@@ -81,10 +95,13 @@ class TestAstropyGauss(Test1DModel):
         self.assertAlmostEqual(gauss(-4., *params)[0], np.exp(-2))
 
     def test_gauss_jacobian(self):
-        gauss=self.gauss
         a = [1. , 1. , 0.5]
         x = np.linspace(-10, 10, 3000)
-        self.check_jacobian(gauss, x, *a)
+        self.check_jacobian(self.gauss, x, *a)
+        # Check that the Jacobian is still fine if fit_deriv is None
+        self.assertEqual(self.gaussl.m.fit_deriv, None)
+        a = [1. , 1. , 0.5, 0.1, 0.5]
+        self.check_jacobian(self.gaussl, x, *a)
 
 class TestNGauss(Test1DModel):
     '''UnitTest class to test ngauss function
