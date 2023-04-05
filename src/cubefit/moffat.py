@@ -48,8 +48,6 @@ def moffat1d(x, *a):
         k0=a[4]
         k1=a[5]
 
-    This function can be used directly with curve_fit.
-
     Limitation: "b"  should  always  be  positive.  In  order  to  force  it,
     especially in fitting routines, its  abolute value is taken (except at some
     point in the computation of derivates).
@@ -157,8 +155,6 @@ def asmoffat1d(x, *a):
     k0=a[6]
     k1=a[7]
 
-    This function can be used directly with curve_fit.
-
     See Also
     --------
     moffat1d, moffat1d_fit, asmoffat1d_fit
@@ -196,7 +192,7 @@ def asmoffat1d(x, *a):
     u3a = 1 + u4a
     u3b = 1 + u4b
     # TODO u3 not used ?
-    u3 = u3a * ta + u3b * tb
+    # u3 = u3a * ta + u3b * tb
     if np.abs(a[3]) > big:
         u1a = np.zeros_like(x)
         u1ab = u1a
@@ -462,8 +458,7 @@ def moffat2d(xy, a, grad, deriv=None):
     This function can be used directly with curve_fit and provides
     derivatives. Contrary to the similar functions gauss(), moffat1d()
     and gauss2d(), moffat2d() does not offer the possibility to add a
-    linear background. See multiprofile.i for compositing several
-    curve_fit functions.
+    linear background.
 
     Limitation:  "b"  should  always  be  positive.  In  order  to  force  it,
     especially in fitting routines, its  abolute value is taken (except at some
@@ -494,8 +489,10 @@ def moffat2d(xy, a, grad, deriv=None):
     alpha = a[6] if npars >= 7 else 0.0
 
     small = 1e-80
-    dx1 = np.sign(np.sign(dx)) / np.finfo(np.float64).eps if abs(dx) < small else 1.0 / dx
-    dy1 = np.sign(np.sign(dy)) / np.finfo(np.float64).eps if abs(dy) < small else 1.0 / dy
+    dx1 = np.sign(np.sign(dx)) / np.finfo(np.float64).eps \
+        if abs(dx) < small else 1.0 / dx
+    dy1 = np.sign(np.sign(dy)) / np.finfo(np.float64).eps \
+        if abs(dy) < small else 1.0 / dy
 
     deltax = xy[:, 0] - x0
     deltay = xy[:, 1] - y0
@@ -576,11 +573,9 @@ def test_moffat():
     curve_fit_func = WrapToCurveFit(moffat1d)
 
     resopt, reqcov = optimize.curve_fit(curve_fit_func, x, y, p0=a0)
-    print("uhUH")
     resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, x, y, p0=a0,
                                                 jac=curve_fit_func.jac)
 
-    print("uh2UH2")
     model = moffat1d(x, *resopt)[0]
     model_jac = moffat1d(x, *resopt_jac)[0]
     chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
@@ -626,7 +621,7 @@ def test_moffat():
     # TODO add test of the gradient with a optimize.curve_fit
     print("===FIT grad ==========")
     # a0 = np.array([1.5, 0.4, 2., 5., 1.5, 5.])
-    a0 = np.array([1.5, 0.4, 1., 0.2, 0.5 , 0.4])
+    a0 = np.array([1.5, 0.4, 1., 0.2, 0.5, 0.4])
 
     # wrap moffat1d in a way suitable for curve_fit
     curve_fit_func = WrapToCurveFit(asmoffat1d)
