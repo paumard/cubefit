@@ -161,7 +161,7 @@ def mp_func(x, a):
 
     # profile = func set by mp_set
     print(f"a[0:npar] {a[0:npar]}")
-    y, gradc = profile(realX, *a[0:npar])
+    y, gradc = profile(realX, a[0:npar])
 
     # call jac
     # gradc=jac(realX,*a[0:npar])
@@ -173,11 +173,9 @@ def mp_func(x, a):
 
     # if (deriv):
     # jac call
-    print(f"a.size a.shape y.shape {a.size} {a.shape} {y.shape}")
-    print(f"y[0] y[1] y[199] {y[0]} {y[1]} {y[199]}")
-    grad = np.full((a.size,y.size),y)
+    grad = np.array((a.size), y)
     # grad(..,1:npar)=gradc ??
-    grad[np.newaxis,0:npar] = gradc
+    grad[1:npar] = gradc
 
     if (equal is not None):
         for i in range(ncomp):

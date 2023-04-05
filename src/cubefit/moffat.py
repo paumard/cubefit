@@ -76,7 +76,7 @@ def moffat1d(x, *a):
 
     a = np.asarray(a)
     x = np.asarray(x)
-    print(f"a asarray {a}")
+    # print(f"a asarray {a}")
     # nterms = len(a)
     nterms = a.size
     if __moffat_vmax:
@@ -84,7 +84,6 @@ def moffat1d(x, *a):
             grad = np.zeros((x.size, nterms))
             return np.zeros_like(x)
     small = 1e-80
-    print(f"a[2] asarray {a[2]}")
     if a[2] < small:
         a[2] = small
     u2 = (x - a[1]) / a[2]
@@ -110,7 +109,7 @@ def moffat1d(x, *a):
     if nterms == 6:
         res += a[5] * x
     # TODO freestyle
-    tb = (x >= a[1])
+    tb=(x >= a[1])
     grad = np.zeros((x.size, nterms))
     grad[:, 0] = u1
     if np.max(u1b):
@@ -118,11 +117,11 @@ def moffat1d(x, *a):
     if np.max(u1b):
         grad[:, 2] = 2 * a[0] * a[3] * u4 / a[2] * u1b
     grad[:, 3] = -a[0] * np.log(u3) * u1
-    if nterms > 4:
+    #if nterms > 4:
     #    grad[:, 4] = 0
     # TODO freestyle
-        if np.max(u1b):
-            grad[:, 4] =  2 * a[0] * (a[3] * u4 / a[4] * u1b * tb)
+    if np.max(u1b):
+        grad[:, 4] =  2 * a[0] * (a[3] * u4 / a[4] * u1b * tb)
     if nterms == 6:
         grad[:, 5] = x
     ind1 = np.where(grad > __moffat_gradmax)
