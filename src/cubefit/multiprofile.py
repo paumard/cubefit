@@ -175,11 +175,9 @@ def mp_func(x, a):
     # jac call
     print(f"a.size a.shape y.shape {a.size} {a.shape} {y.shape}")
     print(f"y[0] y[1] y[199] {y[0]} {y[1]} {y[199]}")
-    grad = np.full((a.size, y.size), y)
+    grad = np.full((a.size,y.size),y)
     # grad(..,1:npar)=gradc ??
-    print(f"grad.shape {grad.shape}")
-    print(f"gradc.shape {gradc.shape}")
-    grad[:, 0:npar] = gradc
+    grad[np.newaxis,0:npar] = gradc
 
     if (equal is not None):
         for i in range(ncomp):
