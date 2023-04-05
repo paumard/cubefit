@@ -7,8 +7,8 @@ Each profile has the following signature:
 
 Wrappers are provided to use these profiles with
 scipy.optimize.curve_fit (WrapToCurveFit) and to use functions
-designed for curve fit with cubefit (WrapFromCurveFit), as well as to
-use astropy.modeling profiles (WrapFromAstropy).
+designed for curve fit with cubefit (WrapFromCurveFit).
+
 '''
 
 import numpy as np
@@ -239,68 +239,6 @@ class WrapFromCurveFit:
             jac = self.jac(xdata, *params)
         return val, jac
 
-class WrapFromAstropy:
-    '''Wrap an astropy.modeling objective function as a cubefit profile
-
-    Uses m.evaluate and m.fit_deriv, falling back to
-    numerical_jacobian if the latter is None.
-
-    Parameters
-    ----------
-    m : astropy.modeling.core.Fittable1DModel
-        A  astropy.modeling objective function model class or instance.
-    epsilon : float, optional
-        Step for numerical_gradient.
-
-    Examples
-    --------
-    >>> import numpy as np
-    >>> import astropy.modeling
-    >>> g=astropy.modeling.functional_models.Gaussian1D()
-    >>> l=astropy.modeling.functional_models.Linear1D()
-    >>> gaussl=WrapFromAstropy(g+l)
-
-    This has constructed a cubefit-compliant model as the sum of two
-    astropy models. Since (g+l).fit_deriv is None, the Jacobian matrix
-    will be estimated numerically. We can now call gaussl the way
-    cubefit expects.
-
-    >>> x=np.linspace(-10, 10, 5)
-    >>> a=[1. , 1. , 0.5, 0.1, 0.5]
-    >>> ydata, jacobian = gaussl(x, *a)
-    >>> ydata.shape
-    (5,)
-    >>> jacobian.shape
-    (5, 5)
-    >>> ydata
-    array([-5.00000000e-01,  5.38018616e-32,  6.35335283e-01,  1.00000000e+00,
-            1.50000000e+00])
-    >>> jacobian[:,0]
-    array([0.00000000e+00, 5.38018616e-32, 1.35335283e-01, 0.00000000e+00,
-           0.00000000e+00])
-
-    See Also
-    --------
-    astropy.modeling
-    numerical_jacobian
-
-    '''
-
-    def __init__(self, m, epsilon=1e-6):
-        self.m=m
-        self.epsilon=epsilon
-
-    def __call__(self, xdata, *params):
-        ''' self(xdata, *params) -> ydata, jacobian
-        '''
-        ydata=self.m.evaluate(xdata, *params)
-        if self.m.fit_deriv is None:
-            jacobian = numerical_jacobian(self.m.evaluate, xdata, *params,
-                                          epsilon=self.epsilon)
-        else:
-            jacobian = np.transpose(self.m.fit_deriv(xdata, *params))
-        return ydata, jacobian
-
 def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
     '''Compute Jacobian matrix of a curve_fit model function
 
@@ -343,7 +281,7 @@ def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
         yp = f(xdata, *ah)
         ah[k] -= epsilon
         ym = f(xdata, *ah)
-        jac[..., k]=(yp-ym)/epsilon
+        jac[:, k]=(yp-ym)/epsilon
 
     return jac
 
@@ -415,6 +353,4 @@ def test_gauss():
 
 
 if __name__ == '__main__':
-    #test_gauss()
-    import doctest
-    doctest.testmod()
+    test_gauss()
