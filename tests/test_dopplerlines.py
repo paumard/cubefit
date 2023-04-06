@@ -18,13 +18,17 @@
 
 import os
 from scipy import optimize
-from .common import *
+import unittest
+import numpy as np
+from common import Test1DModel
 from cubefit.dopplerlines import DopplerLines
 from cubefit.lineprofiles import ngauss
 
-DEBUG=os.environ.get("TEST_DOPPLERLINES_DEBUG")
+DEBUG = os.environ.get("TEST_DOPPLERLINES_DEBUG")
+
 if DEBUG:
     from matplotlib import pyplot as plt
+
 
 class TestDopplerlines(Test1DModel):
     '''UnitTest class to test gauss function
@@ -36,12 +40,15 @@ class TestDopplerlines(Test1DModel):
         Test1DModel.__init__(self, methodName)
 
     def test_dopplerlines_jacobian(self):
-        self.check_jacobian(self.lineobj1, self.waxis, 1., 0., 50., reltol=1e-2, diftol=1e-9)
-        self.check_jacobian(self.lineobj2, self.waxis, 1.2, 0.5, 25., 100., reltol=1e-2)
+        self.check_jacobian(self.lineobj1, self.waxis, 1., 0., 50.,
+                            reltol=1e-2, diftol=1e-9)
+        self.check_jacobian(self.lineobj2, self.waxis, 1.2, 0.5, 25., 100.,
+                            reltol=1e-2)
         waxis = np.linspace(2.15, 2.175, 433)
         lineobj = DopplerLines(2.166120, profile=ngauss)
         xreal_1d = np.array([1.2, 0.5, 25., 100])
-        self.check_jacobian(lineobj, waxis, *xreal_1d, epsilon=1e-6, reltol=1e-2, diftol=2e-8)
+        self.check_jacobian(lineobj, waxis, *xreal_1d, epsilon=1e-6,
+                            reltol=1e-2, diftol=2e-8)
 
     def test_dopplerlines(self):
         """
@@ -60,7 +67,8 @@ class TestDopplerlines(Test1DModel):
             print("testing dopplerlines module")
 
         # instanciate a random number generator with fixed seed
-        # warning: changing the seed may affect the success of certain tests below
+        # warning: changing the seed may affect the success of certain
+        # tests below
         rng = np.random.default_rng(3)
 
         sigma = 20.5
@@ -75,17 +83,10 @@ class TestDopplerlines(Test1DModel):
             print("after init")
         a = np.array([1.2, 25., 100.])
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
-        # y=dop(*a) + rng.standard_normal(100) * sigma
-        # print("ok will change")
 
-        # print(f"y.shape {y.shape}")
         if DEBUG:
             print(f"---- y {y}")
             print(f"---- y[0] {y[0]}")
-        # print(f"*y {y}")
-        # plt.figure()
-        # plt.plot(waxis,y)
-        # plt.show()
 
         if DEBUG:
             print("=============")
@@ -93,10 +94,10 @@ class TestDopplerlines(Test1DModel):
 
         a0 = np.array([1., 0., 50.])
 
-        # optimize.curve_fit(f, xdata, ydata, p0=None, sigma=None, absolute_sigma=False, check_finite=True, bounds=(- inf, inf), method=None, jac=None, **kwargs)
-
-        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0, jac=dop.curvefit_jac)
-        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
+        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
+                                            p0=a0, jac=dop.curvefit_jac)
+        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y,
+                                              p0=a0)
 
         model = dop(waxis, *resopt)[0]
         model2 = dop(waxis, *resopt2)[0]
@@ -109,20 +110,19 @@ class TestDopplerlines(Test1DModel):
         self.assertAlmostEqual(chi2, chi22)
 
         if DEBUG:
-            print(f"=======chi2")
+            print(f"model parameters: {a}")
+            print(f"initial guess {a0}")
+            print(f"curvefit result {resopt}")
+            print(f"curvefit result with jacobian {resopt2}")
+            print("=======chi2")
             print(f"chi2 reduit {chi2}")
             print(f"chi22 reduit {chi22}")
-            print(f"a0 {a0}")
-            print(f"resopt {resopt}")
-            print(f"resopt2 {resopt2}")
 
             plt.figure()
-            # plt.plot(waxis, dop(*a0))
             plt.plot(waxis, model)
             plt.plot(waxis, model2)
             plt.plot(waxis, y)
             plt.show()
-            # jac = dop.curfit_jac(waxis, *a)
 
         # second test two lines
         if DEBUG:
@@ -131,14 +131,15 @@ class TestDopplerlines(Test1DModel):
         waxis = np.linspace(2.15, 2.175, 100)
         dop = DopplerLines(lines)
         a = np.array([1.2, 0.5, 25., 100.])
-        # y=dop(*a) + rng.standard_normal(100) * sigma
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
 
         if DEBUG:
             print("===FIT 2==========")
         a0 = np.array([1., 0.3, 50., 50.])
-        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0, jac=dop.curvefit_jac)
-        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
+        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
+                                            p0=a0, jac=dop.curvefit_jac)
+        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y,
+                                              p0=a0)
 
         model = dop(waxis, *resopt)[0]
         model2 = dop(waxis, *resopt2)[0]
@@ -151,12 +152,13 @@ class TestDopplerlines(Test1DModel):
         self.assertAlmostEqual(chi2, chi22)
 
         if DEBUG:
-            print(f"=======chi2")
+            print(f"model parameters: {a}")
+            print(f"initial guess {a0}")
+            print(f"curvefit result {resopt}")
+            print(f"curvefit result with jacobian {resopt2}")
+            print("=======chi2")
             print(f"chi2 reduit {chi2}")
             print(f"chi22 reduit {chi22}")
-            print(f"a0 {a0}")
-            print(f"resopt {resopt}")
-            print(f"resopt2 {resopt2}")
 
             plt.figure()
             # plt.plot(waxis, dop(*a0))
@@ -165,6 +167,7 @@ class TestDopplerlines(Test1DModel):
             plt.plot(waxis, y, label="y")
             plt.legend()
             plt.show()
+
         # third test two lines and more parameter
         if DEBUG:
             print("# third test two lines and more parameter")
@@ -172,15 +175,15 @@ class TestDopplerlines(Test1DModel):
         waxis = np.linspace(2.15, 2.175, 100)
         dop = DopplerLines(lines)
         a = np.array([1.2, 0.5, 25., 100., 1.])
-        # y=dop(*a) + rng.standard_normal(100) * sigma
         y = dop(waxis, *a)[0] + rng.standard_normal(100) * sigma
         if DEBUG:
             print(f"y==={y}")
             print("===FIT 2 + cst==========")
         a0 = np.array([1., 0.4, 50., 50, 1.5])
-        # resopt,reqcov=optimize.curve_fit(dop.curvefit_func,waxis,y,p0=a0, jac=dop.jacobian)
-        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
-        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0, jac=dop.curvefit_jac)
+        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y,
+                                              p0=a0)
+        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
+                                            p0=a0, jac=dop.curvefit_jac)
 
         model = dop(waxis, *resopt)[0]
         model2 = dop(waxis, *resopt2)[0]
@@ -193,12 +196,13 @@ class TestDopplerlines(Test1DModel):
         self.assertAlmostEqual(chi2, chi22)
 
         if DEBUG:
-            print(f"=======chi2")
+            print(f"model parameters: {a}")
+            print(f"initial guess {a0}")
+            print(f"curvefit result {resopt}")
+            print(f"curvefit result with jacobian {resopt2}")
+            print("=======chi2")
             print(f"chi2 reduit {chi2}")
             print(f"chi22 reduit {chi22}")
-            print(f"a0 {a0}")
-            print(f"resopt {resopt}")
-            print(f"resopt2 {resopt2}")
 
             plt.figure()
             # plt.plot(waxis, dop(*a0))
@@ -208,5 +212,6 @@ class TestDopplerlines(Test1DModel):
             plt.legend()
             plt.show()
 
+
 if __name__ == '__main__':
-   unittest.main()
+    unittest.main()
