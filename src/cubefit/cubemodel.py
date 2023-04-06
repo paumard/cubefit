@@ -20,9 +20,6 @@
 import sys
 import numpy as np
 import matplotlib.pyplot as plt
-# from mpl_toolkits import mplot3d
-# from astropy.visualization import astropy_mpl_style
-# from astropy.utils.data import get_pkg_data_filename
 
 from astropy.io import fits  # pour fits
 
@@ -39,8 +36,6 @@ try:
 except ImportError:
     from dopplerlines import DopplerLines
 
-import sys
-
 # Look hard for vmlmb
 try:
     from VMLMB.python.optm import vmlmb, reason as vmlmb_reason
@@ -50,78 +45,37 @@ except ImportError:
     except ImportError:
         from optm import vmlmb, reason as vmlmb_reason
 
-
-# include "multiprofile.i"
-# include "OptimPack1.i"
-# include "cubeview.i"
-# include "util_fr.i"
-
-# python3
-# from inspect import currentframe, getframeinfo
-# frameinfo = getframeinfo(currentframe())
-# print(frameinfo.filename, frameinfo.lineno)
+# Regularization functions
 
 
-"""
-/*
-   AUTHOR: Thibaut Paumard
-           Damien Gratadour (l1l2, markov)
- */
-"""
-"""
-// First save previous values of temporary function names
-scratch = save(scratch,
-               // methods
-               new, view, eval, printer,
-               fit, model,
-               // static functions
-               l1l2, markov, corr,
-               op_f, op_viewer, op_printer
-               )
-#fitobj = CubeModel(new, cube = cubl(,,indlines), weight = noise,
-#                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
-#                 scale=scale, delta=delta, regularization=cubefit.l1l2,
-#                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
-
-"""
-
-##### Regularization functions
-
-
-# TODO return tuple virer grad_obj
 def markov(x, scale=None, delta=None):
-    """
-    DOCUMENT cubefit.markov(object,grad_object[,scale=,delta=])
+    """Compute a markov regularization
+
+    cubemodel.markov(x,scale=,delta=])
 
     delta^2 . sum [|dx|/delta -ln(1+|dx|/delta) + |dy|/delta -ln(1+|dy|/delta)]
     where |dx| (m,n) = (o(m,n)-o(m-1,n))/scale is the x component of the
     object gradient normalized by scale.
 
-    KEYWORDS :
-    scale : Scale factor applied to Do (default value is 1)
+    Parameters
+    ----------
+    x : array like where to apply the markov regularization
+    scale : Scale factor applied to do (default value is 1)
     delta : Threshold on the gradient for switching between linear and
     quadratic behavour. When delta tends to infinity, the criterion
     becomes purely quadratic.
 
     AUTHOR: Damien Gratadour, borrowed from Yoda.
-    */
     """
-    # print("DBG inside markov")
     # TODO scale et delta already in self
     if (scale is None):
         scale = 1.
     if (delta is None):
         delta = 1.
 
-    # TODO object-roll?
-    # dx = (object-roll(object,[1, 0])) / (delta * scale)
-    # dy = (object-roll(object,[0, 1])) / (delta * scale)
-
-    # TODO index should be [0,-1] ?
     dx = (x - np.roll(x, 1, axis=1)) / (delta * scale)
     dy = (x - np.roll(x, 1, axis=0)) / (delta * scale)
 
-    # map is a python reserved keyword
     amap = np.abs(dx) - np.log(1. + np.abs(dx)) + \
         np.abs(dy) - np.log(1. + np.abs(dy))
 
@@ -135,27 +89,23 @@ def markov(x, scale=None, delta=None):
     dy /= (1. + abs(dy))
 
     # TODO reimplement the true gradient
-    # roll
-    grad_obj = (  dx - np.roll(dx, -1, axis=1) \
-                + dy - np.roll(dy, -1, axis=0)) * \
-               (delta / scale)
-
-    # print (f"crit {crit}")
-    # print (f"crit.shape {crit.shape}")
-    # print (f"grad_obj {grad_obj}")
-    # print (f"grad_obj.shape {grad_obj.shape}")
+    grad_obj = (dx - np.roll(dx, -1, axis=1)
+                + dy - np.roll(dy, -1, axis=0)) * (delta / scale)
 
     return crit, grad_obj
 
-# voir si fonction de module plutot que de class satic
+
 def l1l2(x, scale=None, delta=None):
-    """
-    DOCUMENT cubefit.l1l2(object,grad_object[,scale=,delta=])
+    """Compute a l1l2 regularization
+
+    cubefit.l1l2(x[,scale=,delta=])
     delta^2 . sum [|dx|/delta -ln(1+|dx|/delta)+ |dy|/delta -ln(1+|dy|/delta)]
     where |dx| (m,n) = [o(m,n)-o(m-1,n)]/scale
     is the x component of the  object gradient normalized by scale.
 
-    KEYWORDS :
+    Parameters
+    ----------
+    x : array like
     scale : Scale factor applied to Do (default value is 1)
     delta : Threshold on the gradient for switching between linear
     and quadratic behavour. When delta tends to infinity,
@@ -163,26 +113,24 @@ def l1l2(x, scale=None, delta=None):
 
     AUTHOR: Damien Gratadour, borrowed from Yoda.
     """
-    # print("DBG inside l1l2")
-    # if (!is_set(scale)) scale = 1.
-    # if (!is_set(delta)) delta = 1.
     # TODO scale et delta already in self
     if (scale is None):
         scale = 1.
     if (delta is None):
         delta = 1.
 
-    # TODO object-roll ?
-    # realise un shift
     dx = (x - np.roll(x, 1, axis=1)) / (delta * scale)
     dy = (x - np.roll(x, 1, axis=0)) / (delta * scale)
 
     r = np.sqrt(dx**2 + dy**2)
 
-    # map is a reserved python keyword
     amap = r - np.log(1.+r)
 
-    #if (returnmap):
+    # TODO integrate returnmap with self.dbg
+    # if (returnmap):
+    #    return (delta**2) * amap
+
+    # if (returnmap):
     #    return (delta**2) * amap
 
     crit = (delta**2) * np.sum(amap)
@@ -193,14 +141,11 @@ def l1l2(x, scale=None, delta=None):
     # TODO reimplement the true gradient
     # TODO dx-roll is that ok (x - roll) en place de object-roll
     # ou est ce object - roll ?
-    grad_obj = (  dx - np.roll(dx, -1, axis=1) \
-                + dy - np.roll(dy, -1, axis=0)) * \
-               (delta / scale)
+    grad_obj = (dx - np.roll(dx, -1, axis=1)
+                + dy - np.roll(dy, -1, axis=0)) * (delta / scale)
 
     return crit, grad_obj
 
-
-######## Main class
 
 class CubeModel:
     """Spectro-imaging data model
@@ -222,7 +167,7 @@ class CubeModel:
     data : array_like, optional
         The data to fit, a NY x NX x NW array. Mandatory to call
         methods eval() and fit(). The spectra are in the W dimension.
-    weight: array_like, optional
+    weight : array_like, optional
         An array with the same dimensions as data, giving the relative
         weights of the data points for fitting. Set cell to 0. for
         points to ignore altogether. For Gaussian noise, this should
@@ -232,7 +177,7 @@ class CubeModel:
     profile : callable
         1D model function with signature
            profile(xdata, *params) -> ydata, Jacobian
-    profile_xdata
+    profile_xdata : array_like
         whatever profile accepts as its first positional
         argument. Often a wavelength axis, sometimes a complex object,
         possibly None.
@@ -277,84 +222,16 @@ class CubeModel:
         UNDOCUMENTED
     dbg : bool
         Whether to activate debugging output.
-
-    METHODS
-         These methods can be called as
-             fitobj, METHOD, [parameters]
-         or  result = fitobj(METHOD, [parameters]).
-
-         The NEW method is a bit peculiar as it is normally called from
-         the template CUBEFIT object itself:
-             fitobj = CubeModel(new, )
-         It can however be called as
-             fitobj2 = fitobj(new, )
-    in which case the (potentially overriden) methods and static
-    virtual functions are copied from FITOBJ to FITOBJ2. The members
-    are not copied though (this may change in the future).
-
-    The methods are all inherently "virtual" and can be overriden
-    with
-        fitobj, METHOD=new_implementation
-
-    new:   create an instance of the class. This methods accepts a
-           keyword for each of the cubefit members listed above.
-    view:  visualise parameter maps
-    eval:  compute the criterion (the function to minimise)
-    model: compute a model cube from parameter maps (for visualisation)
-    printer: print various things (in particular the criterion)
-    fit:   performs the actual fit, using op_mnb()
-
-    STATIC VIRTUAL FUNCTIONS
-    Those functions are not "methods" as they don't "use" any
-    member. They can be accessed as fitobj.FUNCTION() and can be
-    overriden with fitobj, FUNCTION=newfunc.
-
-    op_f:  wrapper around EVAL, suitable as the F argument of op_mnb()
-    op_viewer: wrapper around view, suitable as VIEWER for op_mnb()
-    op_printer: wrapper around printer, suitable as PRINTER for op_mnb()
-
-    STATIC FUNCTIONS
-    Those functions are in the cubefit object but not copied by NEW
-    in the FIOBJ object. They can be called with: cubefit.FUNCTION().
-
-    l1l2:   L1L2 regularization method. e.g.:
-              fitobj, regularization=cubefit.l1l2
-    markov: Markov regularization method. e.g.:
-              fitobj, regularization=cubefit.markov
-
-    SYNOPSIS
-    fitobj = CubeModel(new, [members=members])
-    x = array(double, NX, NY, NPARMS) // initial guess
-    fitobj, fit, x
-    fitobj, view, x
-
-    SEE ALSO: oxy, METHOD, FUNCTION, op_mnb, lmfit
-    */
-
     """
-    # TODO important apres premiere phase , regularization et ptweak
-    #
-    # def __init__(self,cube,weight,fcn=None,fcn_x=None, \
-    #            regularization=None,decorrelate=None, \
-    #            scale=None, delta=None, pscale=None, \
-    #            poffset=None, ptweak=None):
-    def __init__(self, data=None, profile=None, profile_xdata=None, weight=None,
-                 scale=None, delta=None, pscale=None, poffset=None,
-                 ptweak=None, regularization=l1l2, decorrelate=None,
-                 view_data=None, view_more=None, framedelay=3):
+    def __init__(self, data=None, profile=None, profile_xdata=None,
+                 weight=None, scale=None, delta=None, pscale=None,
+                 poffset=None, ptweak=None, regularization=l1l2,
+                 decorrelate=None, view_data=None, view_more=None,
+                 framedelay=3):
 
-        #if (regularization is not None):
         self.regularization = regularization
-        #else:
-        #    self.regularization = markov
-        # TODO regularization should ? default to markov
-        #if (regularization is None):
-        #    self.regularization = l1l2
-
-        # function/methods should be the dopplerlin eval func
         self.profile = profile
         self.profile_xdata = profile_xdata
-        # data
         self.data = data
         self.weight = weight
         self.scale = scale
@@ -362,17 +239,18 @@ class CubeModel:
         self.pscale = pscale
         self.poffset = poffset
         self.ptweak = ptweak
+        self.derivatives = None
         self.decorrelate = decorrelate
-        self.framedelay=framedelay
+        self.framedelay = framedelay
         # private data
-        ## to pass additional information from eval to printer
-        self._eval_data=dict()
-        self._printer_data=dict()
-        ## to store data between printer calls
+        # to pass additional information from eval to printer
+        self._eval_data = dict()
+        self._printer_data = dict()
+        # to store data between printer calls
         if view_data is None:
-            view_data={"figsize": (7,7)}
-        self.view_data=view_data
-        self.view_more=view_more
+            view_data = {"figsize": (7, 7)}
+        self.view_data = view_data
+        self.view_more = view_more
 
         # debug option
         self.dbg = False
@@ -380,45 +258,41 @@ class CubeModel:
         self.dbg_data = {}
 
     def view(self, x, noscale=None):
-        """
-        /* DOCUMENT fitobj, view, x
-        View CUBEFIT patameter maps. Used internally for visualisation
-        during a fit (see fit), but can also be called direclty (in
-        this case, NOSCALE should probably be set to 1).
+        """ View a CUBEFIT patameter maps.
 
-        OBJECT
-        FITOBJ    an instance of thecubefit class, created with cibefit.new
-        PARAMETERS
-        X         a stack of parameter maps
-        KEYWORDS
+        Used internally for visualisation during a fit (see fit),
+        but can also be called direclty (in this case, NOSCALE should
+        probably be set to 1).
+
+        Parameters
+        ----------
+        x : array_like
+        a stack of parameter maps
+        noscale : boolean
         noscale=1 to ignore pscale and poffset. NOSCALE should almost
         always be used when VIEW is used manually (in this case,
-        X has not been rescaled consistently with pscale and poffset).
-
-        SEE ALSO cubefit, new
-        */
+        x has not been rescaled consistently with pscale and poffset).
         """
 
         if not noscale:
             x = self.denormalize_parameters(x)
 
-        nterms=np.shape(x)[2]
+        nterms = np.shape(x)[2]
 
         # Prepare plot window
-        if ("fig" not in self.view_data
-            or self.view_data["fig"] is None):
+        if ("fig" not in self.view_data or self.view_data["fig"] is None):
             self.view_data["fig"] = \
                 plt.figure(figsize=self.view_data["figsize"])
             self.view_data["fig"].show()
             self.view_data["axes"] = []
         if ("axes" not in self.view_data
-            or len(self.view_data["axes"]) != nterms) :
-            nx=int(np.sqrt(nterms))
+                or len(self.view_data["axes"]) != nterms):
+            nx = int(np.sqrt(nterms))
             if nx*nx == nterms:
-                ny=nx
+                ny = nx
             else:
-                ny=nx+1
-                nx=ny
+                ny = nx+1
+                nx = ny
             self.view_data["axes"] = \
                 [self.view_data["fig"].add_subplot(ny, nx, p)
                  for p in range(1, nterms+1)]
@@ -426,30 +300,32 @@ class CubeModel:
         for k in range(nterms):
             self.view_data["axes"][k].clear()
             if "imshow_kwds" in self.view_data:
-                kwds=self.view_data["imshow_kwds"][k]
+                kwds = self.view_data["imshow_kwds"][k]
             else:
-                kwds=dict()
-            self.view_data["axes"][k].imshow(x[:,:,k], **kwds)
+                kwds = dict()
+            self.view_data["axes"][k].imshow(x[:, :, k], **kwds)
         if self.view_more is not None:
             self.view_more(self.view_data["fig"], self.view_data["axes"])
         self.view_data["fig"].canvas.draw()
 
     def model(self, params, noscale=False):
+        """Create a model cube from a set of parameter maps.
+
+        Like for the VIEW method, NOSCALE should almost always be set to 1.
+
+        Parameters
+        ----------
+        params : array_like
+        a parameter maps array first dimension number of profile function
+        parameters  ny nx
+
+        See Also
+        --------
+        cubefit, view
         """
-        DOCUMENT
-        model_cube = fitobj(model, x)
-        Create a model cube from a set of parameter maps. Like for the
-        VIEW method, NOSCALE should almost always be set to 1.
+        # /!\ WARNING: this function is for visualisation,
+        # it is "inlined" in eval for optimization
 
-        parameter maps array first dimension number of profile function parameters
-                            ny
-                            nx
-
-        SEE ALSO: cubefit, view
-
-        """
-        # /!\ WARNING: this function is for visualisation, it is "inlined" in eval
-        #  for optimization
         params_dim = params.shape
 
         if noscale:
@@ -457,46 +333,30 @@ class CubeModel:
         else:
             xs = self.denormalize_parameters(params)
 
+        # TODO derivatives never used in model?
         if self.ptweak is not None:
-            derivatives = self.ptweak(xs)
+            self.derivatives = self.ptweak(xs)
 
         nx = params_dim[0]
-        #print(f"nx {nx}")
-
         ny = params_dim[1]
-        #print(f"ny {ny}")
-
-        #print(f"fcn_x {self.profile_xdata}")
-
-        #print(f"xs[0,0,:] {xs[0,0,:]}")
-        #TODO choose return tuple
-        if self.dbg:
-            print("dbgla")
         nz = self.profile(self.profile_xdata, *xs[0, 0, :])[0].size
-        #nz = self.profile(self.profile_xdata, *xs[0, 0, :]).size
-        #TODO wrong nz for doppler
 
-        # y = np.array(double, nx, ny, nz)
         y = np.zeros((nx, ny, nz))
-        #y = np.zeros((nz, nx, ny))
 
         for i in range(nx):
             for j in range(ny):
-                y[i,j,:] = self.profile(self.profile_xdata, *xs[i,j,:])[0]
-                #y[:=,i,j] = self.profile(self.profile_xdata, *xs[i,j,:])[0]
-                # y[:, i, j] = self.profile(xs[:, i, j], *self.profile_xdata)
-        #print(f"y {y[4,4,:]}")
-        #print(f"y.shape {y.shape}")
-        #print(f"y[50,50,:] {y[50,50,:]}")
-        #print(f"y[100,100,:] {y[100,100,:]}")
-        #print("dbg end model func")
+                y[i, j, :] = self.profile(self.profile_xdata, *xs[i, j, :])[0]
+
         return y
 
-    # TODO check for unapply and remove the apply inside ?
-    ## denormalize paramaters from -1,1 boundaries to physical unit
-    # see normalize comment
     def denormalize_parameters(self, x):
         '''De-apply pscale and poffset from normalized parameters x
+
+            denormalize paramaters from -1,1 boundaries to physical unit
+
+            See Also
+            --------
+            normalize_parameters
         '''
         # Note: self.pscale and poffset are broadcast automatically
         if (self.pscale is None):
@@ -510,38 +370,13 @@ class CubeModel:
         return xs
 
 
-        # TODO returnmaps function
-#
-#         returnmaps = 1
-#         if (returnmaps):
-#             maps = np.zeros((nx, ny, d.shape[3]+1))
-#         # //  tot=cube(1,1,)*0.
-#         for i in range(nx):
-#             for j in range(ny):
-#                 if (any(self.weight[i, j, ])):
-#                     spectrum = self.data[i, j, :]
-#                     # TODO adapt with jacobian function
-#                     model = self.profile(self.profile_xdata, xs[i, j, :], deriv=1)
-#                     model_jacobian = self.profile_jacobian(self.profile_xdata, xs[i, j, :])
-#                     grad = model_jacobian
-#                     if (self.pscale is not None):
-#                         grad *= self.pscale[:, ]
-#                     if (derivatives is not None):
-#                         grad *= derivatives[i, j, :, ]
-#                     atom = (model - spectrum) * self.weight[i, j, ]
-#                     # //        tot+=atom
-#                     if (returnmaps):
-#                         maps[i, j, 0] = sum(atom**2)
-#                     # returnmaps force to 1
-#                     # else:
-#                     #    res += sum(atom**2)
-#                     #    gx[i,j,] += np.sum((grad * atom[:,]),0) *2.
-#         # TODO print
-#         # //  window,34
-#         # //  plg, tot
-#
+
     def normalize_parameters(self, x):
         '''Apply pscale and poffset to parameters x
+           Parameters
+           ----------
+           x : aray_like
+           the array of parameters to be normalized
         '''
         # Note: self.pscale and poffset are broadcast automatically
         x_norm = np.copy(x)
@@ -552,10 +387,6 @@ class CubeModel:
 
         return x_norm
 
-# fonction objective a faire manger a vmlmb qui doit retourner
-# un tuple fonction a minimiser + gradient de cette fonction
-# x cube carte parametre nx,ny,np
-    # x is params ?
     def eval(self, x, noscale=False, returnmaps=None):
         """Evaluates fitting criterion and its gradient
 
@@ -615,17 +446,10 @@ class CubeModel:
         if self.weight is None:
             self.weight = np.ones(self.data.shape)
 
-        #print(f"x[49,49,:]{x[49,49,]}")
-        #print(f"x[50,50,:]{x[50,50,]}")
-        #print(f"x[51,51,:]{x[51,51,]}")
-
-        #x = np.array(x)
         d = x.shape
-        #TODO index
         nx = d[0]
         ny = d[1]
         res = 0.
-        # gx => fonction gradient
         gx = np.zeros(d)
 
         if (noscale):
@@ -637,148 +461,83 @@ class CubeModel:
             print(f"shape xs {xs.shape}")
 
         if (self.ptweak is not None):
-            xs, derivatives = self.ptweak(xs)
-            if (derivatives is not None
-                and (derivatives.size != xs.size
-                     or (np.asarray(derivatives.shape) != xs.shape).any())):
+            xs, self.derivatives = self.ptweak(xs)
+            if (self.derivatives is not None
+                and (self.derivatives.size != xs.size
+                     or (
+                       np.asarray(self.derivatives.shape) != xs.shape).any())):
                 raise ValueError("ptweak derivatives should be None "
                                  "or same size as parameter array")
             if self.dbg:
                 print("DBG xs after ptweak:")
                 print(xs)
         else:
-            derivatives = None
+            self.derivatives = None
 
-        # if (returnmaps):
         if (self.dbg):
-            # TODO pourquoi ajouter 1 a la dim des parametres ?
             self.dbg_data["maps"] = np.zeros((nx, ny, d[2]+1))
-        # //  tot=cube(1,1,)*0.
-        # print(f"nx {nx} ny {ny}")
+
         for i in range(nx):
             for j in range(ny):
-                # print(f"nx {i} ny {j}")
-                #print(f"self.weight[197, j,: ] {self.weight[197, j,: ]}")
-                if (any(self.weight[i, j,:])):
-
-                    #print(f"cube shape {self.data.shape}")
-                    spectrum = self.data[i, j,: ]
-                    # TODO adapt with jacobian function
-                    # model = self.profile(self.profile_xdata, xs[i,j,:], deriv=1)
-                    #print(f"xs[i, j, :] {xs[i, j, :]}")
-                    #print(f"self.profile_xdata {self.profile_xdata}")
-                    # fcn_x array 1 dim contenant les wavelength (size nz)
-                    # model = spectre unique d flux au pixel i,j (size nz)
-                    # *xs[i,j,:] np parameters array minimum size_np >= 3
-                    model, model_jacobian = self.profile(self.profile_xdata, *xs[i, j, :])
-                    # model_jacobian = self.profile_jacobian(self.profile_xdata, xs[i, j, :])
-                    # size_grad(nz,np)
+                if (any(self.weight[i, j, :])):
+                    spectrum = self.data[i, j, :]
+                    model, model_jacobian = self.profile(self.profile_xdata,
+                                                         *xs[i, j, :])
                     grad = model_jacobian
                     if (self.pscale is not None):
-                        # TODO add comment for a more pythonic code
-
                         for k in range(self.profile_xdata.size):
-                            grad[k,:] *= self.pscale
+                            grad[k, :] *= self.pscale
 
-                    if (derivatives is not None):
-                        grad *= derivatives[i, j, np.newaxis, :]
+                    if (self.derivatives is not None):
+                        grad *= self.derivatives[i, j, np.newaxis, :]
 
-                    atom = (model - spectrum) * self.weight[i, j,: ]
-                    # //        tot+=atom
+                    atom = (model - spectrum) * self.weight[i, j, :]
 
                     if (self.dbg):
                         self.dbg_data["maps"][i, j, 0] = sum(atom**2)
 
-                    # if (returnmaps):
-                    #    maps[i, j, 0] = sum(atom**2)
-
                     res += sum(atom**2)
-                    # yorick line gx(i,j,) += (grad * atom(,-))(sum,) *2.;
-                    gx[i, j, : ] += np.sum((grad * atom[:,np.newaxis ] * self.weight[i, j, :][:, np.newaxis]), axis=0) * 2.
-        # //  window,34
-        # //  plg, tot
-
+                    gx[i, j, :] += 2. * np.sum(
+                                    (grad * atom[:, np.newaxis] *
+                                     self.weight[i, j, :][:, np.newaxis]),
+                                                axis=0)
         self._eval_data["chi2"] = res
 
-        # TODO optimize xbig for regularization
-        # TODO implemente regularization
-        if self.dbg:
-            print(f" not callable regularization {not callable(self.regularisation)}")
-        # if (!is_func(regularization)) goto out
-        #if (not callable(self.regularization)):
-            # if (self.regularization is not None):
-        # print("DBG start regularization")
-
-        # TODO xbig = np.zeros((d[0]*2 -1, d[1]*2 -1, d[2])) ?
-        # creation d une carte plus grande pour eviter effet de bord des bords
+        # create a bigger map to avoid side effect
         xbig = np.zeros((d[0]*2, d[1]*2, d[2]))
-        # bas gauche
         xbig[:d[0], :d[1], :] = x
-
-        # haut gauche
-        # v1 garde des zeros
-        # print(f"shape x[:,-1:0:-1,:] {x[:,-1:0:-1,:].shape}")
-        # xbig[:d[0], d[1]+1:,:] = x[:,-1:0:-1,:]
-
-        # V2 double la ligne
-        # TODO d[1]+1 ou pas ?
-        # print(f"shape y=np.flip(x,1) {np.flip(x,1).shape}")
-        # print(f"xbig[:d[0], d[1]+1:,:].shape {xbig[:d[0], d[1]+1:,:].shape}")
         xbig[:d[0], d[1]:, :] = np.flip(x, 1)
-
-        #recopie bas haut gauche vers bas haut droite
-        # TODO d[0]+1 ou pas?
         xbig[d[0]:, :, :] = xbig[d[0]:0:-1, :, :]
-        # g is a grad
-        #g = np.empty(xbig.shape[:-1])
-        # TODO for debug only
 
         self._eval_data["regul"] = np.zeros(d[2])
         for k in range(d[2]):
             # TODO pass dict to regularization function
-            if self.regularization is not  None:
+            if self.regularization is not None:
                 if self.scale is not None and self.delta is not None:
-                    # print("scale delta not None")
                     tmp, g = self.regularization(xbig[:, :, k],
-                                         self.scale[k], self.delta[k])
+                                                 self.scale[k], self.delta[k])
                 else:
-                    # print("scale delta None")
                     tmp, g = self.regularization(xbig[:, :, k])
 
                 tmp = tmp / 4.
 
-            # TODO change
+            # TODO returnmaps
                 if (self.dbg):
                     self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
                     print(f"g after regul {g}")
                     print(f"g is a {g.shape}")
-            # if (returnmaps):
-            #    maps[:,:,k] =  tmp[:d[0], :d[1]]
-            # tmp=0
+
                 self._eval_data["regul"][k] = tmp
                 res += tmp
-            # TODO indices commence a 0 ?
-            # print(f"d[0] {d[0]} d[1] {d[1]} ")
-            #gx[:, :, k] += g
                 gx[:, :, k] += g[0:d[0]:+1, 0:d[1]:+1]
-            # Compared to Yorick version :
-            # TODO modify yorick version if needed to compare
-            # no need to add the 4 quadrants since
-            # we divide by 4 above +\
-            # g[0:d[0]:+1, -1:d[1]+1:-1] +\
-            # g[-1:d[0]+1:-1, 1:d[1]:+1] +\
-            # g[-1:d[0]+1:-1, -1:d[1]+1:-1]
 
-        # if (returnmaps):
-        #    return maps
-
-        # a voir a la fin faible priorite
+        # TODO a voir a la fin faible priorite
         if (self.decorrelate is not None):
             dd = self.decorrelate.shape
-            #if (dd.shape[0] != 2):
             if (len(dd.shape) != 2):
                 # TODO reform
-                self.decorrelate = np.reshape(self.decorrelate, (2, self.decorrelate.size, 1))
+                self.decorrelate = np.reshape(self.decorrelate,
+                                              (2, self.decorrelate.size, 1))
                 dd = self.decorrelate.shape
 
             npairs = dd.shape[2]
@@ -806,19 +565,19 @@ class CubeModel:
                 t, x, fx, gx, pgnorm, alpha, fg):
         """Printer for `optm.vmlmb`."""
 
-        nterms= np.shape(x)[2]
+        nterms = np.shape(x)[2]
 
         # First call with iters < 1 to initialize
         if iters < 1:
             # Initialize tprev
-            self._printer_data["tprev"]=-self.framedelay-1
+            self._printer_data["tprev"] = -self.framedelay-1
 
             # Print header line
             row = "# Iter.   Time (ms)    Eval. Reject.       Obj. Func.           Chi2   "
             lin = "# ----------------------------------------------------------------------"
             for k in range(nterms):
                 row += f"    Regul[{k}]"
-                lin +=  "------------"
+                lin += "------------"
             row += "       Grad.       Step"
             lin += "-----------------------"
             print(row, file=output)
@@ -832,22 +591,19 @@ class CubeModel:
         print(row, file=output)
 
         # Plot x
-        if (self.framedelay>=0
-            and t-self._printer_data["tprev"] > self.framedelay):
+        if (self.framedelay >= 0
+                and t - self._printer_data["tprev"] > self.framedelay):
             self.view(x)
             self._printer_data["tprev"] = t
 
     def criterion(self, x, noscale=False):
-        '''self.eval(x, noscale=noscale)[0]
+        '''return the criterion of the eval function
+
+            self.eval(x, noscale=noscale)[0]
         '''
         return self.eval(x, noscale=noscale)[0]
 
-    # Accept all vmlmb keywords (vmlmb_kwargs).
-    # lower and upper need special treatment (for rescaling).
-    # There's a bug in optm which requires verb > 0.
-    # output is used in fit, we need it.
-    # Set printer to self.printer by default, but not in the signature.
-    def fit(self,x,
+    def fit(self, x,
             lower=None, upper=None,
             verb=1, printer=None, output=sys.stdout,
             **vmlmb_kwargs):
@@ -894,11 +650,19 @@ class CubeModel:
         CubeModel.eval : The objective function.
         optm.vmlmb : The fitter.
         optm.reason : Reasons corresponding to status codes.
+
+        Notes
+        -----
+        Accept all vmlmb keywords (vmlmb_kwargs).
+        lower and upper need special treatment (for rescaling).
+        There's a bug in optm which requires verb > 0.
+        output is used in fit, we need it.
+        Set printer to self.printer by default, but not in the signature.
         """
 
         # This can't be done in signature
         if printer is None:
-            printer=self.printer
+            printer = self.printer
 
         # Normalize paramaters according to user expectation as fitter
         # may behave better and it may be easier to tune
@@ -942,7 +706,7 @@ class CubeModel:
         return result, fx, gx, status
 
     def op_printer(self, output, iter, eval, cpu,
-                           fx, gnorm, steplen, x, extra):
+                   fx, gnorm, steplen, x, extra):
         # TODO printer
         # extra, printer, output, iter, eval, cpu, fx, gnorm, steplen, x
         print("TODO op_printer")
@@ -980,6 +744,7 @@ class CubeModel:
         # extra,view, x
         print("TODO op_viewer")
 
+
 def corr(xy, *grad, deriv=None):
     """
     DOCUMENT correlation = cubefit.corr(xy [, grad, deriv=1])
@@ -1014,30 +779,6 @@ def corr(xy, *grad, deriv=None):
 
     return res, grad
 
-# cubefit = save(
-#        //methods
-#        new=new, view=view, model=model,
-#        printer=printer, fit=fit, eval=eval,
-#        // static functions
-#        l1l2=l1l2, markov=markov, corr=corr,
-#        op_f=op_f, op_viewer=op_viewer,
-#        op_printer=op_printer
-#        )
-
-# // clean namespace
-# restore, scratch
-
-
-#
-# // fog' = g'.f'og
-# // (1/v)' = v'.(1/x)'ov =-v'/v^2
-# // (u.v)' = u'.v + u.v'
-# // (u/v)' = u'/v - u.v'/v^2 = (u'.v - u.v') / v^2.
-# u(xj) = Sum [(xi-<x>)(yi-<y>)] = Sum [xi.(yi-<y>)] - <x> Sum (yi-<y>)
-# u'(xj) = (yj-<y>) - d<x>/dxj * Sum(yi-<y>) = (yj-<y>) - < (yi -<y>) >
-# v(xj) = sqrt( Sum (xi-<x>)^2 ) * sqrt(Sum (yi-<y>)^2)
-#
-# */
 
 def test_gauss():
     # debug model
@@ -1049,29 +790,26 @@ def test_gauss():
     nz = 433
     nparms = 5
 
-    weight=np.ones((nx,ny,nz))
+    weight = np.ones((nx, ny, nz))
 
     cube_gauss = np.ndarray((nx, ny, nz))
     cube_noise_gauss = np.ndarray((nx, ny, nz))
 
     # choose parameter for model
 
-    gauss_param = np.array([1,1, 0.5, 0.5,0.1])
-    #np.repeat(gauss_param,433,axis=0)
-    #np.tile(gauss_param,(433,1))
-    #gauss_param = np.full((433,5),[1,1, 0.5, 0.5,0.1])
-    # gauss_xdata = np.linspace(-10,10,3000)
-    gauss_xdata = np.linspace(-10,10,nz)
+    gauss_param = np.array([1, 1, 0.5, 0.5, 0.1])
+    gauss_xdata = np.linspace(-10, 10, nz)
 
-    sigma=0.02
+    sigma = 0.02
 
     print("test gauss call")
-    y = gauss(gauss_xdata,*gauss_param)[0]
-    y_noise = y + np.random.standard_normal(y.size) * sigma
+    y = gauss(gauss_xdata, *gauss_param)[0]
+    # y_noise = y + np.random.standard_normal(y.size) * sigma
 
-    #plt.figure()
-    #plt.plot(gauss_xdata, y)
-    #plt.show()
+    # plt.figure()
+    # plt.plot(gauss_xdata, y)
+    # plt.plot(gauss_xdata, y_noise)
+    # plt.show()
 
     model_param_gauss = np.full((nx, ny, nparms), gauss_param)
 
@@ -1084,7 +822,7 @@ def test_gauss():
     # np.c_[cube_gauss,gauss_param]
 
     print("creating line obj")
-    lineobj_gauss=DopplerLines(lines=gauss_param[0], profile=ngauss)
+    DopplerLines(lines=gauss_param[0], profile=ngauss)
 
     # create fit obj
     print("creating fit obj")
@@ -1116,7 +854,7 @@ def test_gauss():
 
     # on recree un obj cubefit
     fitobj_eval_gauss = CubeModel(cube_noise_gauss,
-                                fcn_gauss, fcn_x_gauss, weight)
+                                  fcn_gauss, fcn_x_gauss, weight)
 
     # calcul du point de depart x0 les cartes de parametres initiales
     x0 = model_param_gauss
@@ -1130,7 +868,6 @@ def test_gauss():
     (res_x, fx, gx, status) = vmlmb(fitobj_eval_gauss.eval, x0, mem=x0.size,
                                     blmvm=False, fmin=0, verb=1,
                                     output=sys.stdout)
-
 
     # write_fits(res_x, "mycube_res_x_gauss.fits")
     # write_fits(fx, "mycube_res_fx_dop.fits")
@@ -1209,7 +946,7 @@ def test():
     print("creating fit obj")
     # create fit obj
     fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
-                                   fcn_x_doppler, weight)
+                                     fcn_x_doppler, weight)
     # print(f"cube shape {cube.shape}")
     # print(f"cube_noise shape {cube_noise.shape}")
 
@@ -1247,12 +984,11 @@ def test():
     print(f"============#debug eval")
 
     # TODO nz=433
-    cube_empty = np.ndarray((nx, ny, nz))
+    # cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
     fitobj_eval_doppler = CubeModel(cube_noise_doppler,
-                                  fcn_doppler, fcn_x_doppler, weight)
-
+                                    fcn_doppler, fcn_x_doppler, weight)
 
     # tiré de l exemple
     # f = eval(f"fitobj_eval.eval")
@@ -1264,22 +1000,23 @@ def test():
 
 
     print(f"calling vmlmb")
-    #def vmlmb_printer(output, iters, evals, rejects, t, x, fx, gx, pgnorm, alpha, fg):
+    # def vmlmb_printer(output, iters, evals, rejects, t, x, fx, gx,
+    # pgnorm, alpha, fg):
     print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
     # ---------------------------------------------------------------------------------
     # besoin fonction objectif (param 1)  gradient (param 2)
     # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
     #         mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
     (res_x, fx, gx, status) = vmlmb(fitobj_eval_doppler.eval, x0, mem=x0.size,
-                                blmvm=False, fmin=0,
-                                verb=1, output=sys.stdout)
+                                    blmvm=False, fmin=0,
+                                    verb=1, output=sys.stdout)
 
     print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
     print("res_x for dop")
     print(f"{res_x}")
-    #write_fits(res_x, "mycube_res_x_dop.fits")
-    #write_fits(fx, "mycube_res_fx_dop.fits")
-    #write_fits(gx, "mycube_res_gx_dop.fits")
+    # write_fits(res_x, "mycube_res_x_dop.fits")
+    # write_fits(fx, "mycube_res_fx_dop.fits")
+    # write_fits(gx, "mycube_res_gx_dop.fits")
     print(f"fx {fx}")
     print(f"gx {gx}")
     print(f"status {status}")
@@ -1354,7 +1091,7 @@ def test_fit():
     print(f"============#debug eval")
 
     # TODO nz=433
-    cube_empty = np.ndarray((nx, ny, nz))
+    # cube_empty = np.ndarray((nx, ny, nz))
 
     # on recree un obj cubefit
     fitobj_eval_doppler = CubeModel(cube_noise_doppler,
@@ -1362,7 +1099,7 @@ def test_fit():
                                     regularization=l1l2)
 
     doppler_param_test = np.array([1.1, 1., 25., 100])
-    #doppler_param_test = np.array([1.2, 0.5, 25., 100])
+    # doppler_param_test = np.array([1.2, 0.5, 25., 100])
     model_param_doppler_test = np.full((nx, ny, doppler_param_test.size),
                                        doppler_param_test)
 
@@ -1373,7 +1110,7 @@ def test_fit():
     print(f"x0_test {x0_test}")
     print(f"calling fit function")
 
-    (res_x, fx, gx, status) = fitobj_eval_doppler.fit( x0_test)
+    (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0_test)
 
     print("# Iter.   Time (ms)   Eval. Reject.    Obj. Func.      Grad.  Step")
     print("res_x for test_fit")
@@ -1383,11 +1120,9 @@ def test_fit():
     print(f"status {status}")
 
 
-
-
 def write_fits(cube, cname):
-    fit_hdu = fits.PrimaryHDU(np.transpose(cube,[2,0,1]))
-    #fit_hdu = fits.PrimaryHDU(cube)
+    fit_hdu = fits.PrimaryHDU(np.transpose(cube, [2, 0, 1]))
+    # fit_hdu = fits.PrimaryHDU(cube)
     fit_hdul = fits.HDUList([fit_hdu])
     fit_hdul.writeto(cname, overwrite=True)
 
@@ -1414,18 +1149,16 @@ def print_array_info(array):
     print("---")
 
 
-
-
 def print_array_slice(myarray):
-    size=min(myarray.shape)//2
+    size = min(myarray.shape)//2
     print(f"myarray size-1 {myarray[size-1,size-1,:]}")
     print(f"myarray size {myarray[size,size,:]}")
     print(f"myarray size+1 {myarray[size+1,size+1,:]}")
 
 
 def plot_array_slice(myarray):
-    #print(myarray.shape)
-    size=min(myarray.shape)//2
+    # print(myarray.shape)
+    size = min(myarray.shape)//2
     plt.figure()
     plt.imshow(myarray[size, size, :], cmap='gray')
     plt.colorbar()
@@ -1439,102 +1172,9 @@ def add_noise(cube, sigma=0.02):
     return tmp_cube
 
 
-"""Unconstrained non-linear optimization problems from MINPACK-1 Project.
-
-The Python functions implementing the MINPACK-1 problems are named `prob_P`
-with `P` the problem number in the range 1:18.  Any problem function can be
-called as:
-
-    prob_P() -> yields the name of the problem.
-
-    prob_P(0, n=None, factor=None) -> yields the starting point for the problem
-        as a vector `x` of `n` elements which is a multiple (times `factor`,
-        default 1) of the standard starting point. For the 7-th problem the
-        standard starting point is 0, so in this case, if `factor` is not
-        unity, then the function returns `x` filled with `factor`. The values
-        of `n` for problems 1, 2, 3, 4, 5, 10, 11, 12, 16, and 17 are 3, 6, 3,
-        2, 3, 2, 4, 3, 2, and 4, respectively. For problem 7, `n` may be 2 or
-        greater but is usually 6 or 9. For problems 6, 8, 9, 13, 14, 15 and 18,
-        `n` may be variable, however it must be even for problem 14, a multiple
-        of 4 for problem 15, and not greater than 50 for problem 18.
-
-    prob_P(1, x) -> yields the value of the objective function of the problem.
-        `x` is the parameter array: a vector of length `n`.
-
-    prob(2, x) -> yields the gradient of the objective function of the problem.
-
-Since the execution time may change, you can compare the outputs after
-filtering with:
-
-    sed -e 's/^\( *[0-9]*\) *[^ ]*/\1/'
-
-to get rid of the 2nd column.
-"""
-
-# syntax introduit en python 3.8 / => parametre forcement positionnel
-# python 3.0 * => obligation de nommer ces parametres
-# def test(probs = range(1, 19), /, *, n=None, factor=None, fmin=0,
-
-# def test_optm_vmlmb(probs = range(1, 19),  n=None, factor=None, fmin=0,
-#         mem="max", verb=1, blmvm=False, output=sys.stdout, **kwds):
-#    """Run one or several tests from the MINPACK-1 Project.
-#
-#    Usage:
-#
-#         optm_minpack1_test(probs=range(1,19))
-#
-# Arg `probs` is a single problem number (in the range 1:18) or a list of
-#    problem numbers.  By default, all problems are tested with keywords
-#    `mem="max"`, `fmin=0`, and `verb=1`.
-#
-#    Keywords:
-#      n - Size of the problem.
-#
-#      factor - Scaling factor for the starting point.
-#
-#      mem, fmin, lnsrch,
-#      xtiny, epsilon, f2nd,
-#      ftol, gtol, xtol,
-#      blmvm, maxiter, maxeval,
-#      verb, cputime, output - These keywords are passed to `optm_vmlmb` (which
-#          to see).  All problems can be tested with `fmin=0`.  By default,
-#       `mem="max"` to indicate that the number of memorized previous iterates
-#          should be equal to the size of the problem.
-#
-#    See also: `optm.vmlmb`.
-#
-#    """
-#    # Output stream.
-#    if type(output) == str:
-#        output = open(output, mode="a")
-#    if probs is None:
-#        probs = range(1, 19)
-#    elif isinstance(probs, int):
-#        probs = [probs]
-#    for j in probs:
-#        f = eval(f"prob_{j:d}")
-#        x0 = f(0, n=n, factor=factor)
-#        if mem == "max":
-#            m = x0.size
-#        else:
-#            m = mem
-#        if verb != 0:
-#            name = f()
-#            if blmvm:
-#                algo = "BLMVM"
-#            else:
-#                algo = "VMLMB"
-# print(f"# MINPACK-1 Unconstrained Pblem #{j:d} ({x0.size} vars): {f():s}.",
-#                  file=output)
-#            print(f"# Algorithm: {algo:s} (mem={m:d}).",file=output)
-#        (x, fx, gx, status) = optm.vmlmb(lambda x: (f(1, x), f(2, x)), x0,
-#                                         mem=m, blmvm=blmvm, fmin=fmin,
-#                                         verb=verb, output=output, **kwds)
-#
-# -----------------------------------------------------------------------
-
-
 def numerical_gradient3(f, x, epsilon=1e-6):
+    '''Compute gradient numerically
+    '''
     d = x.shape
     g = np.zeros(d)
     f0 = f(x)
@@ -1546,6 +1186,7 @@ def numerical_gradient3(f, x, epsilon=1e-6):
                 g[i, j, k] = (f(temp)-f0)/epsilon
     return g
 
+
 class RegularizationWithNumericalGradient:
     '''Wrapper around a regularization function to provide numerical gradient
 
@@ -1555,37 +1196,38 @@ class RegularizationWithNumericalGradient:
     '''
 
     def __init__(self, func, epsilon=1e-6):
-        self.func=func
-        self.epsilon=epsilon
+        self.func = func
+        self.epsilon = epsilon
 
     def __call__(self, x, scale=None, delta=None):
 
         # ensure x is an array and we will not modify the input array
-        x=np.copy(x)
+        x = np.copy(x)
 
-        shape=x.shape
+        shape = x.shape
 
-        f0=self.func(x, scale, delta)
+        f0 = self.func(x, scale, delta)
         if type(f0) is tuple:
-            f0=f0[0]
+            f0 = f0[0]
 
-        g=np.zeros(shape)
+        g = np.zeros(shape)
 
         for j in range(shape[1]):
             for i in range(shape[0]):
                 val = x[j, i]
                 x[j, i] = val + 0.5*self.epsilon
-                fplus=self.func(x, scale, delta)
+                fplus = self.func(x, scale, delta)
                 if type(fplus) is tuple:
-                    fplus=fplus[0]
+                    fplus = fplus[0]
                 x[j, i] = val - 0.5*self.epsilon
-                fminus=self.func(x, scale, delta)
+                fminus = self.func(x, scale, delta)
                 if type(fminus) is tuple:
-                    fminus=fminus[0]
+                    fminus = fminus[0]
                 x[j, i] = val
                 g[j, i] = (fplus-fminus)/self.epsilon
 
         return f0, g
+
 
 if __name__ == '__main__':
     testpourgauss = 0
