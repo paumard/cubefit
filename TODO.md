@@ -117,10 +117,11 @@ For instance the checklists below follow this syntax:
    1. [ ] Activate auto-building and auto-checking in gitlab.
 1. [ ] Manage dependencies
    1. [ ] manually add 
-            ```shell
-            git clone https://github.com/emmt/VMLMB.git
-            export PYTHONPATH=$PYTHONPATH:$VMLMBPATH/python to the docs
             ```
+            git clone https://github.com/emmt/VMLMB.git
+            export PYTHONPATH=$PYTHONPATH:$VMLMBPATH/python
+            ```
+        to the docs
    1. [ ] the python way help to package VMLMB.git/python
 
 ### P2: Nice-to-have feature (=optional)
