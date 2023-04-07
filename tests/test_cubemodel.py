@@ -19,61 +19,12 @@
 # import sys
 import os
 import unittest
-from astropy.io import fits
 import numpy as np
-# from .common import *
 from cubefit.dopplerlines import DopplerLines
 from cubefit.cubemodel import CubeModel, markov, l1l2
 from cubefit.lineprofiles import gauss, ngauss
 
 DEBUG = os.environ.get("TEST_CUBEMODEL_DEBUG")
-if DEBUG:
-    from matplotlib import pyplot as plt
-
-
-def write_fits(cube, cname):
-    fit_hdu = fits.PrimaryHDU(np.transpose(cube, [2, 0, 1]))
-    # fit_hdu = fits.PrimaryHDU(cube)
-    fit_hdul = fits.HDUList([fit_hdu])
-    fit_hdul.writeto(cname, overwrite=True)
-
-
-def open_fits(cube, cname):
-    fit_hdul = fits.open(cname)
-    fit_hdul.info()
-    fit_hdr = fit_hdul[0].header
-    list(fit_hdr.keys())
-
-    cube = fit_hdul[0].data
-    print("open_fits hdul0.data--")
-    print(type(cube))
-    print(cube.ndim)
-    print(cube.shape)
-
-
-def print_array_info(array):
-    print(f'{array=}'.split('=')[0])
-    print("array is a ")
-    print(type(array))
-    print(array.shape)
-    print(array.ndim)
-    print("---")
-
-
-def print_array_slice(myarray):
-    size = min(myarray.shape)//2
-    print(f"myarray size-1 {myarray[size-1,size-1,:]}")
-    print(f"myarray size {myarray[size,size,:]}")
-    print(f"myarray size+1 {myarray[size+1,size+1,:]}")
-
-
-def plot_array_slice(myarray):
-    # print(myarray.shape)
-    size = min(myarray.shape)//2
-    plt.figure()
-    plt.imshow(myarray[size, size, :], cmap='gray')
-    plt.colorbar()
-    plt.show()
 
 
 def add_noise(cube, sigma=0.02):
@@ -160,6 +111,71 @@ class TestCubemodel(unittest.TestCase):
 
         self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.],
                             diftol=1e-2)
+
+    def helper_cubemodel_create(self, **model_kwargs):
+        """Helper for CubeModel initialization
+
+        pass a dict to create the cube we wanted
+
+        Parameters
+        ----------
+        **model_kwargs : dict
+            The dict with all the specific paramaters to construct
+            the cubemodel to create.
+            default to shape "(5, 4, 433)", profile "gauss"
+
+        Returns
+        -------
+        cubemodel
+            the cubemodel to test
+
+        Raises
+        ------
+        ValueError
+            when an inconsistency is detected between the value of
+            parameter
+
+        """
+        # get from the dict profile,regularization,pscale,offset
+        try:
+            # Shape of data cube (nx, ny, nz)
+            nx, ny, nz = model_kwargs['shape']
+        except (ValueError, KeyError):
+            # raise CustomException('must provide a shape to use this helper')
+            nx, ny, nz = 5, 4, 433
+
+        try:
+            # get from the dict the type profile
+            which_profile = model_kwargs['profile']
+        except KeyError:
+            which_profile = gauss
+
+        try:
+            # get from the dict the type regularization
+            which_regularization = model_kwargs['regularization']
+        except KeyError:
+            which_regularization = markov
+
+        try:
+            # get from the dict the scale
+            which_scale = model_kwargs['scale']
+        except KeyError:
+            which_scale = None
+
+        try:
+            # get from the dict the delta
+            which_delta = model_kwargs['delta']
+        except KeyError:
+            which_delta = None
+
+        # Model we want to test
+        doppler_profile = DopplerLines(2.166120, profile=which_profile)
+        doppler_profile_xdata = np.linspace(2.15, 2.175, nz)
+        model = CubeModel((nx, ny, nz), profile=doppler_profile,
+                          profile_xdata=doppler_profile_xdata,
+                          regularization=which_regularization,
+                          scale=which_scale, delta=which_delta, framedelay=-1)
+        return model
 
     def helper_cubemodel_fit(self, model, shape, xreal, xtest, sigma,
                              **fit_kwargs):
@@ -449,7 +465,6 @@ class TestCubemodel(unittest.TestCase):
         '''
         # print(f"  Temporary debug of test regularization")
         nx = ny = 10
-
         # test for uniform image
         # create a uniform image (2D array)
         img_uniform = np.full((nx, ny), 50)
@@ -510,6 +525,85 @@ class TestCubemodel(unittest.TestCase):
         img_pattern[5:9] = 1
         crit_m_pattern, _ = markov(img_pattern)
         crit_l1l2_pattern, _ = l1l2(img_pattern)
+        self.assertLess(crit_m_pattern, crit_m_rand,
+                        "markov regularization criterion \
+                        for an image with geometric pattern should be \
+                        less than a for a random one")
+        self.assertLess(crit_l1l2_pattern, crit_l1l2_rand,
+                        "l1l2 regularization criterion \
+                        for an image with geometric pattern should be \
+                        less than a for a random one")
+
+        # print(f"crit bicol {crit_pattern}")
+        # print(f"grad {grad}")
+
+    def test_cubemodel_regularization_with_scale_delta(self):
+        '''Check that CubeModel.regularization succeeds
+        (flavor: noreg, markov, l1l2)
+        '''
+        # print(f"  Temporary debug of test regularization")
+        nx = ny = 10
+        scale = delta = 5
+        # test for uniform image
+        # create a uniform image (2D array)
+        img_uniform = np.full((nx, ny), 50)
+        crit_m, _ = markov(img_uniform, scale, delta)
+        crit_l1l2, _ = l1l2(img_uniform, scale, delta)
+        # print(f"crit uni {crit}")
+        # print(f"grad {grad}")
+        self.assertEqual(crit_m, 0,
+                         "markov regularization criterion \
+                         for a uniform image should be 0")
+        self.assertEqual(crit_l1l2, 0,
+                         "l1l2 regularization criterion \
+                         for a uniform image should be 0")
+
+        # adding a constant should not change result
+        img_uniform += 50
+        crit_m_const, _ = markov(img_uniform, scale, delta)
+        crit_l1l2_const, _ = l1l2(img_uniform, scale, delta)
+        # print(f"crit uni const {crit_const}")
+        # print(f"grad {grad}")
+        self.assertEqual(crit_m_const, crit_m,
+                         "markov regularization criterion \
+                         for a uniform image should be 0")
+        self.assertEqual(crit_l1l2_const, crit_l1l2,
+                         "l1l2 regularization criterion \
+                         for a uniform image should be 0")
+
+        # test for spiked image
+        img_spike = np.full((nx, ny), 50)
+        img_spike[4:6, 4:6] = 100
+        crit_m_spike, _ = markov(img_spike, scale, delta)
+        crit_l1l2_spike, _ = l1l2(img_spike, scale, delta)
+        self.assertGreater(crit_m_spike, 100,
+                           "markov regularization criterion \
+                           for a spike image should be high")
+        self.assertGreater(crit_l1l2_spike, 100,
+                           "l1l2 regularization criterion \
+                           for a spike image should be high")
+        #
+        # print(f"crit spike {crit_spike}")
+        # print(f"grad {grad}")
+        # test for random image
+        img_rand = np.random.normal(0, 1, (nx, ny))
+        crit_m_rand, _ = markov(img_rand, scale, delta)
+        crit_l1l2_rand, _ = l1l2(img_rand, scale, delta)
+        self.assertLess(crit_m_rand, crit_m_spike,
+                        "markov regularization criterion \
+                        for a random image should be \
+                        less than a spiked one")
+        self.assertLess(crit_l1l2_rand, crit_l1l2_spike,
+                        "l1l2 regularization criterion \
+                        for a random image should be \
+                        less than a spiked one")
+
+        # print(f"crit rand {crit_rand}")
+        # print(f"grad {grad}")
+        img_pattern = np.zeros((nx, ny))
+        img_pattern[5:9] = 1
+        crit_m_pattern, _ = markov(img_pattern, scale, delta)
+        crit_l1l2_pattern, _ = l1l2(img_pattern, scale, delta)
         self.assertLess(crit_m_pattern, crit_m_rand,
                         "markov regularization criterion \
                         for an image with geometric pattern should be \
