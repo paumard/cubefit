@@ -225,7 +225,7 @@ class CubeModel:
     """
     def __init__(self, data=None, profile=None, profile_xdata=None,
                  weight=None, scale=None, delta=None, pscale=None,
-                 poffset=None, ptweak=None, regularization=l1l2,
+                 poffset=None, ptweak=None, regularization=markov,
                  decorrelate=None, view_data=None, view_more=None,
                  framedelay=3):
 
@@ -369,8 +369,6 @@ class CubeModel:
 
         return xs
 
-
-
     def normalize_parameters(self, x):
         '''Apply pscale and poffset to parameters x
            Parameters
@@ -498,9 +496,9 @@ class CubeModel:
 
                     res += sum(atom**2)
                     gx[i, j, :] += 2. * np.sum(
-                                    (grad * atom[:, np.newaxis] *
-                                     self.weight[i, j, :][:, np.newaxis]),
-                                                axis=0)
+                                        (grad * atom[:, np.newaxis] *
+                                         self.weight[i, j, :][:, np.newaxis]),
+                                               axis=0)
         self._eval_data["chi2"] = res
 
         # create a bigger map to avoid side effect
@@ -803,7 +801,7 @@ def test_gauss():
     sigma = 0.02
 
     print("test gauss call")
-    y = gauss(gauss_xdata, *gauss_param)[0]
+    _ = gauss(gauss_xdata, *gauss_param)[0]
     # y_noise = y + np.random.standard_normal(y.size) * sigma
 
     # plt.figure()
@@ -846,12 +844,6 @@ def test_gauss():
     print("check cube")
     print(f"{cube_model_gauss[4,4,:]}")
 
-    # debug eval
-    print(f"============#debug eval")
-
-    # TODO nz=433
-    # cube_empty = np.ndarray((nx, ny, nz))
-
     # on recree un obj cubefit
     fitobj_eval_gauss = CubeModel(cube_noise_gauss,
                                   fcn_gauss, fcn_x_gauss, weight)
@@ -860,18 +852,10 @@ def test_gauss():
     x0 = model_param_gauss
     # x0 = gauss_param
 
-    # tiré de l exemple
-    # besoin fonction objectif (param 1)  gradient (param 2)
-    # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
-    #            mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
-
     (res_x, fx, gx, status) = vmlmb(fitobj_eval_gauss.eval, x0, mem=x0.size,
                                     blmvm=False, fmin=0, verb=1,
                                     output=sys.stdout)
 
-    # write_fits(res_x, "mycube_res_x_gauss.fits")
-    # write_fits(fx, "mycube_res_fx_dop.fits")
-    # write_fits(gx, "mycube_res_gx_dop.fits")
     print(f"fx {fx}")
     print(f"gx {gx}")
     print(f"status {status}")
