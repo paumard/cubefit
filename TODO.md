@@ -52,12 +52,12 @@ For instance the checklists below follow this syntax:
 
 1. [ ] Activate regularization:
    1. [ ] Write unit tests for l1l2 and markov:
-      - [ ] Create a uniform image (2D array), feed it l1l2 and
+      - [x] Create a uniform image (2D array), feed it l1l2 and
             markov: result should be 0;
-      - [ ] Add a constant: result should not change.;
-      - [ ] Add a single spike in the center, result should increase
+      - [x] Add a constant: result should not change.;
+      - [x] Add a single spike in the center, result should increase
             and become large with peak value;
-      - [ ] Create two images of same shape with a standard deviation
+      - [x] Create two images of same shape with a standard deviation
             of one, the first image made of random values (e.g. drawn
             with random.normal(0, 1, shape) and the other with an
             organized pattern (for instance left half=-1, right
@@ -108,7 +108,7 @@ For instance the checklists below follow this syntax:
    1. [ ] setup.cfg.
 1. [ ] Sort out copyrighting:
    1. [ ] Add a LICENSE file;
-   1. [ ] Add copyright and license statement to each file.
+   1. [x] Add copyright and license statement to each file.
 1. [ ] Lint the code:
    1. [ ] Run pylint and correct all issues found.;
    1. [ ] Run pydocstyle --convention=numpy  and fix all issues;
