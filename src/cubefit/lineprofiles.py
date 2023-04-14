@@ -695,75 +695,7 @@ def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
     return jac
 
 
-def test_gauss():
-    test_gauss = True
-    # test gauss
-    if (test_gauss):
-        a = np.array([1, 1, 0.5, 0.5, 0.1])
-        x = np.linspace(-10, 10, 3000)
-        # print(x)
-        ret, ret_jac = gauss(x, *a)
-        # ret_jac = gauss_jac(x, *a)
-        plt.figure()
-        plt.xlim(-10, 10)
-        plt.plot(x, ret)
-        plt.figure()
-        plt.plot(x, ret_jac)
-        plt.show()
-
-    # test ngauss
-    na = np.array([1, 1, 0.5, 0.5, 0.1])
-    # x=np.arange(-50,50,0.3)
-    # x=3.5
-    nx = np.linspace(-10, 10, 3000)
-    # print("x ")
-    # print(x)
-    nret, nret_jac = ngauss(nx, *na)
-    # nret_jac = ngauss_jac(nx, *na)
-    plt.figure()
-    plt.xlim(-10, 10)
-    plt.plot(nx, nret)
-    plt.figure()
-    plt.plot(nx, nret_jac)
-    plt.show()
-
-    sigma = 0.02
-    y = nret + np.random.standard_normal(nret.size) * sigma
-
-    # TODO add test of the gradient with a optimize.curve_fit
-    print("===FIT grad ==========")
-    a0 = np.array([1.5, 0.4, 2., 5., 1.5])
-
-    # wrap gauss in a way suitable for curve_fit
-    curve_fit_func = WrapToCurveFit(gauss)
-
-    resopt, reqcov = optimize.curve_fit(curve_fit_func, nx, y, p0=a0)
-    resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
-                                                jac=curve_fit_func.jac)
-
-    model = gauss(nx, *resopt)[0]
-    model_jac = gauss(nx, *resopt_jac)[0]
-    chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
-    chi2_jac = np.sum(((y-model_jac)/sigma)**2)/(y.size-a.size+1)
-
-    print("=======chi2")
-    print(f"chi2 reduit {chi2}")
-    print(f"chi2_jac reduit {chi2_jac}")
-    print(f"a0 {a0}")
-    print(f"resopt {resopt}")
-    print(f"resopt_jac {resopt_jac}")
-
-    plt.figure()
-    # plt.plot(waxis, dop(*a0))
-    plt.plot(nx, model, label="model")
-    plt.plot(nx, model_jac, label="model_jac")
-    plt.plot(nx, y, label="y")
-    plt.legend()
-    plt.show()
-
-
 if __name__ == '__main__':
-    # test_gauss()
     import doctest
     # doctest.testmod()
     doctest.testmod(verbose=False, optionflags=doctest.ELLIPSIS)
