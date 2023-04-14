@@ -17,8 +17,6 @@
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
 import numpy as np
-from scipy import optimize
-import matplotlib.pyplot as plt
 
 # First try a relative import. This will work when lineprofiles,
 # dopplerlines and cubefit are submodules of a common module.  This
@@ -101,13 +99,7 @@ class DopplerLines():
         else:
             self.relative = relative
 
-        self.dbg = False
-        if self.dbg:
-            print(f"dop_init withi:")
-            print(f"self.lines  {self.lines}")
-            print(f"self.nlines  {self.nlines}")
-
-    def __call__(self, xdata , *params):
+    def __call__(self, xdata, *params):
         """Evaluate model
 
         Parameters
@@ -115,40 +107,26 @@ class DopplerLines():
         xdata : array_like
         params : array_like
 
+        Examples
+        --------
+        >>> sigma = 0.5
+        >>> lines = 2.166120
+        >>> waxis = np.linspace(2.15, 2.175, 100)
+        >>> dop = DopplerLines(lines)
+        >>> a = np.array([1.2, 25., 100.])
+        >>> y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
 
         See Also
         --------
         dopplerlines, oxy
         """
-        if self.dbg:
-            print("DBG CALL doppler line eval start __call__")
-            print(f"type {type(self.nlines)}")
-            print(f"self.nlines {self.nlines}")
-            print(f"type(xdata) {type(xdata)}")
-            print(f"call with xdata {xdata}")
-            print(f"type(params) {type(params)}")
-            print(f"call with params {params}")
-            print(f"call with params.size {len(params)}")
-            print(f"params {params}")
-            print(f"self.nlines {self.nlines}")
 
         vel = params[self.nlines]
-
         dvel = params[self.nlines+1]
-
         more = np.array([])
+
         if (len(params) > self.nlines+2):
             more = np.append(more, params[self.nlines+2:])
-
-        if self.dbg:
-            print(f"vel {vel}")
-            print(f"dvel {dvel}")
-            print(f"more {more}")
-            print(f"self.lines {self.lines}")
-            print(f"vel {vel}")
-            print(f"c_1 {self.c_1}")
-            print(f"self.lines.type {type(self.lines)}")
-            print(f"vel.type {type(vel)}")
 
         # TODO correct with dimsmin ?
         lambda1 = np.zeros(self.lines.size)
@@ -174,13 +152,6 @@ class DopplerLines():
         model = np.zeros(xdata.shape)
 
         grad = np.zeros((len(params), *xdata.shape), dtype=float)
-
-        if self.dbg:
-            print(f"params[0] {params[0]} lambda1[0] {lambda1[0]}")
-            print(f"widths[0] {widths[0]} more {more}")
-
-            print(f"{len(params)} {lambda1.size} {widths.size}")
-            print(f"{more.size} {self.lines.size}")
 
         aa = np.zeros((3+more.size))
 
@@ -225,155 +196,57 @@ class DopplerLines():
     def curvefit_func(self, xdata, *params):
         """curvefit-compatible wrapper eval
 
+        Examples
+        --------
+        >>> sigma = 20.5
+        >>> lines = 2.166120
+        >>> waxis = np.linspace(2.15, 2.175, 100)
+        >>> dop = DopplerLines(lines)
+        >>> a = np.array([1.2, 25., 100.])
+        >>> y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
+        >>> a0 = np.array([1., 0., 50.])
+        >>> resopt, _ = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
+        >>> model = dop(waxis, *resopt)[0]
+        >>> chi = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
+
+        # >>> print(f"resopt {resopt}")
+        # >>> print(f"chi {chi}")
+
         See Also
         --------
         curvefit, dopplerlines, dopplerlines.eval
 
         """
-        if self.dbg:
-            print("DBG CALL curvefit_func")
-            print(f"xdata is {xdata}")
-            print(f"params is {params}")
-
         return self(xdata, *params)[0]
 
     def curvefit_jac(self, xdata, *params):
         """curvefit-compatible wrapper around eval jacobian function
 
+        Examples
+        --------
+        >>> sigma = 20.5
+        >>> lines = 2.166120
+        >>> waxis = np.linspace(2.15, 2.175, 100)
+        >>> dop = DopplerLines(lines)
+        >>> a = np.array([1.2, 25., 100.])
+        >>> y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
+        >>> a0 = np.array([1., 0., 50.])
+        >>> resopt, _ = optimize.curve_fit(dop.curvefit_func, waxis,
+        ...         y, p0=a0, jac=dop.curvefit_jac)
+        >>> model = dop(waxis, *resopt)[0]
+        >>> chi = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
+
+        # >>> print(f"resopt {resopt}")
+        # >>> print(f"chi {chi}")
+
         See Also
         --------
         curvefit, dopplerlines, dopplerlines.eval
         """
-        if self.dbg:
-            print(f"xdata is {xdata}")
-            print(f"xdata is {xdata}")
-
         return self(xdata, *params)[1]
 
 
-def test():
-    """
-    """
-    print("testing dopplerlines module")
-
-    sigma = 20.5
-
-    # first test
-    print("# first test")
-    lines = 2.166120
-    waxis = np.linspace(2.15, 2.175, 100)
-    dop = DopplerLines(lines)
-    print("after init")
-    a = np.array([1.2, 25., 100.])
-    y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
-    # y=dop(*a) + np.random.standard_normal(100) * sigma
-    # print("ok will change")
-
-    # print(f"y.shape {y.shape}")
-    print(f"---- y {y}")
-    print(f"---- y[0] {y[0]}")
-    # print(f"*y {y}")
-    # plt.figure()
-    # plt.plot(waxis,y)
-    # plt.show()
-
-    print("=============")
-    print("===FIT  1==========")
-
-    a0 = np.array([1., 0., 50.])
-
-    resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
-                                        p0=a0, jac=dop.curvefit_jac)
-    resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
-
-    model = dop(waxis, *resopt)[0]
-    model2 = dop(waxis, *resopt2)[0]
-    chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
-    chi22 = np.sum(((y-model2)/sigma)**2)/(y.size-a.size+1)
-
-    print(f"=======chi2")
-    print(f"chi2 reduit {chi2}")
-    print(f"chi22 reduit {chi22}")
-    print(f"a0 {a0}")
-    print(f"resopt {resopt}")
-    print(f"resopt2 {resopt2}")
-
-    plt.figure()
-    plt.plot(waxis, model)
-    plt.plot(waxis, model2)
-    plt.plot(waxis, y)
-    plt.show()
-    # jac = dop.curfit_jac(waxis, *a)
-
-    # second test two lines
-    print("# second test two lines")
-    lines = (2.166120, 2.155)
-    waxis = np.linspace(2.15, 2.175, 100)
-    dop = DopplerLines(lines)
-    a = np.array([1.2, 0.5, 25., 100.])
-    # y=dop(*a) + np.random.standard_normal(100) * sigma
-    y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
-
-    print("===FIT 2==========")
-    a0 = np.array([1., 0.3, 50., 50.])
-    resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
-                                        p0=a0, jac=dop.curvefit_jac)
-    resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
-
-    model = dop(waxis, *resopt)[0]
-    model2 = dop(waxis, *resopt2)[0]
-    chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
-    chi22 = np.sum(((y-model2)/sigma)**2)/(y.size-a.size+1)
-
-    print(f"=======chi2")
-    print(f"chi2 reduit {chi2}")
-    print(f"chi22 reduit {chi22}")
-    print(f"a0 {a0}")
-    print(f"resopt {resopt}")
-    print(f"resopt2 {resopt2}")
-
-    plt.figure()
-    # plt.plot(waxis, dop(*a0))
-    plt.plot(waxis, model, label="model")
-    plt.plot(waxis, model2, label="model2")
-    plt.plot(waxis, y, label="y")
-    plt.legend()
-    plt.show()
-    # third test two lines and more parameter
-    print("# third test two lines and more parameter")
-    lines = (2.166120, 2.155)
-    waxis = np.linspace(2.15, 2.175, 100)
-    dop = DopplerLines(lines)
-    a = np.array([1.2, 0.5, 25., 100., 1.])
-    # y=dop(*a) + np.random.standard_normal(100) * sigma
-    y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
-    print(f"y==={y}")
-    print("===FIT 2 + cst==========")
-    a0 = np.array([1., 0.4, 50., 50, 1.5])
-    resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
-    resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
-                                        p0=a0, jac=dop.curvefit_jac)
-
-    model = dop(waxis, *resopt)[0]
-    model2 = dop(waxis, *resopt2)[0]
-    chi2 = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
-    chi22 = np.sum(((y-model2)/sigma)**2)/(y.size-a.size+1)
-
-    print(f"=======chi2")
-    print(f"chi2 reduit {chi2}")
-    print(f"chi22 reduit {chi22}")
-    print(f"a0 {a0}")
-    print(f"resopt {resopt}")
-    print(f"resopt2 {resopt2}")
-
-    plt.figure()
-    # plt.plot(waxis, dop(*a0))
-    plt.plot(waxis, model, label="model")
-    plt.plot(waxis, model2, label="model2")
-    plt.plot(waxis, y, label="y")
-    plt.legend()
-    plt.show()
-
-
 if __name__ == '__main__':
-    test()
+    import doctest
+    # doctest.testmod()
+    doctest.testmod(verbose=False, optionflags=doctest.ELLIPSIS)
