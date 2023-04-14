@@ -41,7 +41,7 @@ from scipy import optimize
 # DONE ajout boolean switch deriv if deriv return res, grad ?
 # def gauss(x, *a, deriv):
 def gauss(x, *a):
-    '''Compute a Gaussian profile.
+    """Compute a Gaussian profile.
 
     Parameters
     ----------
@@ -76,10 +76,44 @@ def gauss(x, *a):
 
     FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> a = np.array([1, 1, 0.5, 0.5, 0.1])
+    >>> x = np.linspace(-10, 10, 5)
+    >>> ret, ret_jac = gauss(x, *a)
+    >>> print(f"{ret}")
+    [-0.5         0.          0.63533528  1.          1.5       ]
+    >>> print(f"{ret_jac}")
+    [[ 7.95674389e-106 -3.50096731e-104  7.70212809e-103  1.00000000e+000
+      -1.00000000e+001]
+     [ 5.38018616e-032 -1.29124468e-030  1.54949361e-029  1.00000000e+000
+      -5.00000000e+000]
+     [ 1.35335283e-001 -5.41341133e-001  1.08268227e+000  1.00000000e+000
+       0.00000000e+000]
+     [ 1.26641655e-014  2.02626649e-013  1.62101319e-012  1.00000000e+000
+       5.00000000e+000]
+     [ 4.40853133e-071  1.58707128e-069  2.85672830e-068  1.00000000e+000
+       1.00000000e+001]]
+
+    # >>> import matplotlib.pyplot as plt
+    # >>> plt.figure()
+    # <...
+    # >>> plt.plot(x, ret)
+    # [...
+    # >>> plt.figure()
+    # <...
+    # >>> plt.plot(x, ret_jac)
+    # [...
+    # >>> plt.show()
+    # >>> plt.close()
+
+
     See Also
     --------
     cubefit.lineprofiles.ngauss
-    '''
+
+    """
     # ensure a and x are numpy arrays and not some other array_like
     # promote to at least float64
     a = np.asarray(a)
@@ -103,7 +137,6 @@ def gauss(x, *a):
 
     res = a[0]*u1
 
-    # if deriv:
     grad = np.zeros(np.shape(x) + (nterms,))
     grad[..., 0] = u1
     grad[..., 1] = res*(x-a[1])/a[2]**2
@@ -112,10 +145,6 @@ def gauss(x, *a):
         grad[..., 3] = 1.
     if (nterms == 5):
         grad[..., 4] = x
-
-    # print("inside gauss_jac")
-    # print(f"x {x}")
-    # print(f"a {a}")
 
     if (nterms > 3):
         res = res+a[3]
@@ -166,6 +195,39 @@ def ngauss(x, *a):
 
     FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
 
+    Examples
+    --------
+    >>> import numpy as np
+    >>> a = np.array([1, 1, 0.5, 0.5, 0.1])
+    >>> x = np.linspace(-10, 10, 5)
+    >>> ret, ret_jac = ngauss(x, *a)
+    >>> print(f"{ret}")
+    [-0.5         0.          0.60798193  1.          1.5       ]
+    >>> print(f"{ret_jac}")
+    [[ 6.34856311e-106 -2.79336777e-104  6.13271196e-103  1.00000000e+000
+      -1.00000000e+001]
+     [ 4.29276747e-032 -1.03026419e-030  1.22773150e-029  1.00000000e+000
+      -5.00000000e+000]
+     [ 1.07981933e-001 -4.31927732e-001  6.47891598e-001  1.00000000e+000
+       0.00000000e+000]
+     [ 1.01045422e-014  1.61672675e-013  1.27317231e-012  1.00000000e+000
+       5.00000000e+000]
+     [ 3.51749909e-071  1.26629967e-069  2.27230441e-068  1.00000000e+000
+       1.00000000e+001]]
+
+    # >>> import matplotlib.pyplot as plt
+    # >>> plt.figure()
+    # <...
+    # >>> plt.plot(x, ret)
+    # [...
+    # >>> plt.figure()
+    # <...
+    # >>> plt.plot(x, ret_jac)
+    # [...
+    # >>> plt.show()
+    # >>> plt.close()
+
+
     See also
     --------
     cubefit.lineprofiles.gauss
@@ -194,10 +256,275 @@ def ngauss(x, *a):
 
     res, grad = gauss(x, *a)
 
-    # grad = gauss_jac(x, *a)
-
     grad[..., 2] -= I0*sigmam1*grad[..., 0]
     grad[..., 0] *= eqwidthm1
+
+    return res, grad
+
+
+def moffat(x, *a):
+    '''Compute a Moffat profile.
+
+    Parameters
+    ----------
+    x : array_like
+        Independent variable, for instance wavelengths for which the
+        profile must be computed.
+    a : array_like
+        Parameters of the Moffat: (I0, x0, dx [, offset [, slope]]) with:
+        I0 : peak value
+        x0 : center
+        dx : Gaussian standard deviation
+        offset (optional) : constant offset
+        slope (optional) : linear offset
+
+    Returns
+    -------
+    ydata : array_like
+        The values of the Moffat with paramaters a computed at
+        x. Same shape as x.
+    jac : array like
+        The Jacobian matrix of the model, with shape x.size × a.size
+        (if x is a 1D array) or a.size (if x is a scalar).
+
+    Notes
+    -----
+    Returns a Moffat:
+        I=I0*(1+((x-x0)/dx)^2)^-b [+ k0 [+ k1*x]]
+    Where:
+        I0=a[0]
+        x0=a[1] deriv: 2*I0*b*(x-x0)/(dx^2)*(1+((x-x0)/dx)^2)^(-b-1)
+        dx=a[2] deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
+        b=a[3]
+
+        and if a is of length 4 or 5:
+        k0=a[4]
+        k1=a[5]
+
+    Limitation: "b"  should  always  be  positive.  In  order  to  force  it,
+    especially in fitting routines, its  abolute value is taken (except at some
+    point in the computation of derivates).
+
+    Examples
+    --------
+    >>> a = np.array([1, 1, 0.5, 0.5, 0.1])
+    >>> x = np.linspace(-10, 10, 10)
+    >>> ret, ret_jac = moffat(x, *a)
+    >>> print(f"{ret}")
+    [0.14540766 0.15686984 0.1760503  0.21462411 0.33046638 1.07618706
+     0.30952909 0.20910093 0.17357057 0.15547002]
+
+    See Also
+    --------
+    cubefit.lineprofiles.ngauss, asmoffat
+    '''
+    __moffat_betamax = None
+    __moffat_vmax = None
+    __moffat_gradmax = None
+    a = np.asarray(a)
+    if __moffat_gradmax is None:
+        __moffat_gradmax = 1e150
+    if __moffat_betamax is not None:
+        big = __moffat_betamax
+    else:
+        big = 1e18
+
+    a = np.asarray(a)
+    x = np.asarray(x)
+    nterms = a.size
+    if __moffat_vmax:
+        if abs(a[1]) > __moffat_vmax:
+            grad = np.zeros((x.size, nterms))
+            return np.zeros_like(x)
+    small = 1e-80
+    if a[2] < small:
+        a[2] = small
+    u2 = (x - a[1]) / a[2]
+    ind = np.where(abs(u2) > __moffat_gradmax)
+    if len(ind[0]) > 0:
+        u2[ind] = np.sign(u2[ind]) * __moffat_gradmax
+        print("*** 1 Warning: MOFFAT caught overflows.")
+    u4 = u2 ** 2
+    u3 = 1 + u4
+    if abs(a[3]) > big:
+        u1 = np.zeros_like(x)
+        u1b = u1
+        ind = np.where(u4 == 0)
+        if len(ind[0]) > 0:
+            u1[ind] = 1
+            u1b[ind] = 1
+    else:
+        u1 = u3 ** -abs(a[3])
+        u1b = u3 ** (-abs(a[3]) - 1)
+    res = a[0] * u1
+    if nterms > 4:
+        res += a[4]
+    if nterms == 6:
+        res += a[5] * x
+    # TODO freestyle
+    tb = (x >= a[1])
+    grad = np.zeros((x.size, nterms))
+    grad[:, 0] = u1
+    if np.max(u1b):
+        grad[:, 1] = 2 * a[0] * a[3] * u2 / a[2] * u1b
+    if np.max(u1b):
+        grad[:, 2] = 2 * a[0] * a[3] * u4 / a[2] * u1b
+    grad[:, 3] = -a[0] * np.log(u3) * u1
+    if nterms > 4:
+        #    grad[:, 4] = 0
+        # TODO freestyle
+        if np.max(u1b):
+            grad[:, 4] = 2 * a[0] * (a[3] * u4 / a[4] * u1b * tb)
+    if nterms == 6:
+        grad[:, 5] = x
+    ind1 = np.where(grad > __moffat_gradmax)
+    if len(ind1[0]) > 0:
+        grad[ind1] = __moffat_gradmax
+        print("*** 2 Warning: MOFFAT caught overflows.")
+    ind2 = np.where(grad < -__moffat_gradmax)
+    if len(ind2[0]) > 0:
+        grad[ind2] = -__moffat_gradmax
+        print("*** 3 Warning: MOFFAT caught overflows.")
+    ind3 = np.where(abs(grad) < 1 / __moffat_gradmax)
+    if len(ind3[0]) > 0:
+        grad[ind3] = 0
+        # print("MOFFAT warning: grad underflows caught, grad is inaccurate.")
+    return res, grad
+
+
+def asmoffat(x, *a):
+    '''Compute an asymmetrical Moffat profile
+
+    Compute a (1D) asymmetrical Moffat profile:
+    I=I0*(1+((x-x0)/dx)^2)^-b [+ k0 [+ k1*x]]
+
+    Where:
+    I0 = a[0]
+    x0 = a[1]  deriv: 2*I0*b*(x-x0)/(dx^2)*(1+((x-x0)/dx)^2)^(-b-1)
+    dx for x<x0 = a[2] deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
+    b for x<x0  = a[3]
+    dx for x>=x0 = a[4] deriv: 2*I0*b*(x-x0)^2/(dx^3)*(1+((x-x0)/dx)^2)^(-b-1)
+    b for x>=x0 = a[5]
+
+    and if a is of length 7 or 8:
+    k0=a[6]
+    k1=a[7]
+
+    Returns
+    -------
+    ydata : array_like
+        The values of the asymmetrical Moffat with paramaters a computed at
+        x. Same shape as x.
+    jac : array like
+        The Jacobian matrix of the model, with shape x.size × a.size
+        (if x is a 1D array) or a.size (if x is a scalar).
+
+    Examples
+    --------
+    >>> na = np.array([1, 1, 0.5, 0.5, 0.1, 0.5])
+    >>> x=np.arange(-50,50,0.3)
+    >>> nx = np.linspace(-10, 10, 10)
+    >>> nret, nret_jac = asmoffat(nx, *na)
+    ASMOFFAT warning: grad underflows caught, grad is inaccurate.
+    >>> print(f"{nret}")
+    [0.04540766 0.05686984 0.0760503  0.11462411 0.23046638 0.66896473
+     0.04281784 0.02194593 0.01475249 0.01111043]
+
+    See Also
+    --------
+    moffat
+    '''
+    a = np.asarray(a)
+    a = np.promote_types(a.dtype, np.float64).type(a)
+    x = np.asarray(x)
+    x = np.promote_types(x.dtype, np.float64).type(x)
+
+    __moffat_betamax = np.inf
+    __moffat_vmax = np.inf
+    __moffat_gradmax = 1e150
+    if __moffat_betamax:
+        big = __moffat_betamax
+    else:
+        big = 1e18
+    nterms = a.size
+    if __moffat_vmax and np.abs(a[1]) > __moffat_vmax:
+        grad = np.zeros((x.size, nterms))
+        return np.zeros_like(x)
+    small = 1e-80
+    if a[2] < small:
+        a[2] = small
+    if a[4] < small:
+        a[4] = small
+    ta = (x < a[1])
+    tb = (x >= a[1])
+    u2a = (x - a[1]) / a[2]
+    u2b = (x - a[1]) / a[4]
+    u4a = u2a ** 2
+    u4b = u2b ** 2
+    u3a = 1 + u4a
+    u3b = 1 + u4b
+    # TODO u3 not used ?
+    # u3 = u3a * ta + u3b * tb
+    if np.abs(a[3]) > big:
+        u1a = np.zeros_like(x)
+        u1ab = u1a
+        ind = np.where(u4a == 0)[0]
+        if ind.size > 0:
+            u1a[ind] = 1
+            u1ab[ind] = 1
+    else:
+        u1a = u3a ** -np.abs(a[3])
+        u1ab = u3a ** (-abs(a[3]) - 1)
+
+    if np.abs(a[5]) > big:
+        u1b = np.zeros_like(x)
+        u1bb = u1b
+        ind = np.where(u4b == 0)[0]
+        if ind.size > 0:
+            u1b[ind] = 1
+            u1bb[ind] = 1
+    else:
+        u1b = u3b ** -np.abs(a[5])
+        u1bb = u3b ** (-np.abs(a[5]) - 1)
+    u1 = u1a * ta + u1b * tb
+    u1B = u1ab * ta + u1bb * tb
+    res = a[0] * u1
+    if nterms > 6:
+        res += a[6]
+    if nterms == 8:
+        res += a[7] * x
+
+    grad = np.zeros((x.size, nterms))
+    grad[:, 0] = u1
+    if np.max(u1B):
+        grad[:, 1] = 2 * a[0] * (
+            a[3] * u2a / a[2] * u1ab * ta + a[5] * u2b / a[4] * u1bb * tb
+            )
+    if np.max(u1ab):
+        grad[:, 2] = 2 * a[0] * (a[3] * u4a / a[2] * u1ab * ta)
+    grad[:, 3] = -a[0] * np.log(u3a)*u1a*ta
+    if np.max(u1bb):
+        grad[:, 4] = 2*a[0]*(a[5]*u4b/a[4]*u1bb*tb)
+    grad[:, 5] = -a[0]*np.log(u3b)*u1b*tb
+    # Useless line due to initialisation:
+    # if (nterms>6) grad(,7)=0;
+    if (nterms == 8):
+        grad[:, 7] = x
+    # try to avoid overflows in curve_fit.
+    ind1 = np.where(grad > __moffat_gradmax)
+    if (np.size(ind1) > 0):
+        grad[ind1] = __moffat_gradmax
+        print("ASMOFFAT warning: grad overflows caught, grad is inaccurate.")
+
+    ind2 = np.where(grad < -__moffat_gradmax)
+    if (np.size(ind2) > 0):
+        grad[ind2] = -__moffat_gradmax
+        print("ASMOFFAT warning: grad overflows caught, grad is inaccurate.")
+    # try to avoid underflows in curve_fit.
+    ind3 = np.where(np.abs(grad) < 1/__moffat_gradmax)
+    if (np.size(ind3) > 0):
+        grad[ind3] = 0
+        print("ASMOFFAT warning: grad underflows caught, grad is inaccurate.")
 
     return res, grad
 
@@ -340,7 +667,6 @@ def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
         matrix. Can be a scalar (same step for all parameters) or same
         size as params.
 
-
     Returns
     -------
     jac : array_like
@@ -439,4 +765,5 @@ def test_gauss():
 if __name__ == '__main__':
     # test_gauss()
     import doctest
-    doctest.testmod()
+    # doctest.testmod()
+    doctest.testmod(verbose=False, optionflags=doctest.ELLIPSIS)
