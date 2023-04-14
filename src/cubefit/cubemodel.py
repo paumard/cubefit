@@ -21,7 +21,6 @@ import sys
 import numpy as np
 import matplotlib.pyplot as plt
 
-from astropy.io import fits  # pour fits
 
 # First try a relative import. This will work when lineprofiles,
 # dopplerlines and cubefit are submodules of a common module.  This
@@ -354,9 +353,9 @@ class CubeModel:
 
             denormalize paramaters from -1,1 boundaries to physical unit
 
-            See Also
-            --------
-            normalize_parameters
+        See Also
+        --------
+        normalize_parameters
         '''
         # Note: self.pscale and poffset are broadcast automatically
         if (self.pscale is None):
@@ -371,9 +370,10 @@ class CubeModel:
 
     def normalize_parameters(self, x):
         '''Apply pscale and poffset to parameters x
-           Parameters
-           ----------
-           x : aray_like
+
+        Parameters
+        ----------
+        x : aray_like
            the array of parameters to be normalized
         '''
         # Note: self.pscale and poffset are broadcast automatically
@@ -498,7 +498,7 @@ class CubeModel:
                     gx[i, j, :] += 2. * np.sum(
                                         (grad * atom[:, np.newaxis] *
                                          self.weight[i, j, :][:, np.newaxis]),
-                                               axis=0)
+                                         axis=0)
         self._eval_data["chi2"] = res
 
         # create a bigger map to avoid side effect
@@ -571,8 +571,9 @@ class CubeModel:
             self._printer_data["tprev"] = -self.framedelay-1
 
             # Print header line
-            row = "# Iter.   Time (ms)    Eval. Reject.       Obj. Func.           Chi2   "
-            lin = "# ----------------------------------------------------------------------"
+            row = "# Iter.\tTime (ms)\tEval. Reject.\tObj. Func.\tChi2\t"
+            lin = "# -----\t---------\t-------------\t----------\t----\t----"
+
             for k in range(nterms):
                 row += f"    Regul[{k}]"
                 lin += "------------"
@@ -582,7 +583,9 @@ class CubeModel:
             print(lin, file=output)
 
         # print info on one row
-        row = f"{iters:7d} {t*1e3:11.3f} {evals:7d} {rejects:7d} {fx:23.15e} {self._eval_data['chi2']:11.3e} "
+        row = f"{iters:7d} {t*1e3:11.3f} {evals:7d} {rejects:7d} \
+                {fx:23.15e} {self._eval_data['chi2']:11.3e} "
+
         for val in self._eval_data['regul']:
             row += f"{val:11.3e} "
         row += f"{pgnorm:11.3e} {alpha:11.3e}"
@@ -743,21 +746,26 @@ class CubeModel:
         print("TODO op_viewer")
 
 
-def corr(xy, *grad, deriv=None):
+def corr(xy, *grad):
+    """compute a cross correlation of XY[:,0] and XY[:,1]
+
+        correlation = cubefit.corr(xy [, grad, deriv=1])
+
+    Returns
+    -------
+        the cross-correlation of XY[:,0] and XY[:,1]
+
     """
-    DOCUMENT correlation = cubefit.corr(xy [, grad, deriv=1])
-    Return the cross-correlation of XY(..,1) and XY(..,2)
-    """
-    x = xy[:, 1]
-    y = xy[:2]
+    x = xy[:, 0]
+    y = xy[:, 1]
 
     d = x.shape
     n = x.size
-    sx = sum(x)
-    sy = sum(y)
-    u = n*sum(x*y) - (sx*sy)
-    a = n*sum(x**2) - sx**2
-    b = n*sum(y**2) - sy**2
+    sx = np.sum(x)
+    sy = np.sum(y)
+    u = n * np.sum(x*y) - (sx*sy)
+    a = n * np.sum(x**2) - sx**2
+    b = n * np.sum(y**2) - sy**2
     v = np.sqrt(a*b)
     if (v):
         res = u/v
@@ -766,14 +774,13 @@ def corr(xy, *grad, deriv=None):
 
     # res = v ? u/v : 1.
 
-    if (deriv):
-        if (v):
-            gx = (n*y - sy - u*(n*x - sx)/a) / v
-            gy = (n*x - sx - u*(n*y - sy)/b) / v
-            grad = [gx, gy]
+    if (v):
+        gx = (n*y - sy - u*(n*x - sx)/a) / v
+        gy = (n*x - sx - u*(n*y - sy)/b) / v
+        grad = [gx, gy]
 
-        else:
-            grad = np.array([1., d, 2])
+    else:
+        grad = np.array([1., d, 2])
 
     return res, grad
 
@@ -816,9 +823,6 @@ def test_gauss():
     fcn_gauss = gauss
     fcn_x_gauss = gauss_xdata
 
-    # cube_gauss[...,0:nz] = gauss_param
-    # np.c_[cube_gauss,gauss_param]
-
     print("creating line obj")
     DopplerLines(lines=gauss_param[0], profile=ngauss)
 
@@ -833,13 +837,6 @@ def test_gauss():
 
     # add noise
     cube_noise_gauss = add_noise(cube_model_gauss, sigma)
-
-    # write fits cube
-    write_fits(cube_model_gauss, "mycube_model_gauss.fits")
-    write_fits(cube_noise_gauss, "mycube_gauss.fits")
-
-    print("check fits")
-    open_fits(cube_model_gauss, "mycube_model_gauss.fits")
 
     print("check cube")
     print(f"{cube_model_gauss[4,4,:]}")
@@ -950,11 +947,11 @@ def test():
     # print_array_slice(cube_noise_doppler)
     # print_array_slice(cube_noise_gauss)
 
-    write_fits(cube_model_doppler, "mycube_model_doppler.fits")
-    write_fits(cube_noise_doppler, "mycube_doppler.fits")
+    # write_fits(cube_model_doppler, "mycube_model_doppler.fits")
+    # write_fits(cube_noise_doppler, "mycube_doppler.fits")
 
     print("check fits")
-    open_fits(cube_model_doppler, "mycube_model_doppler.fits")
+    # open_fits(cube_model_doppler, "mycube_model_doppler.fits")
     # print("diff noise - model")
     # print(f"{cube_noise_doppler[49,49,:] - cube_model_doppler[49,49,:]}")
 
@@ -965,7 +962,7 @@ def test():
     # fitobj_doppler.view(cube_model_doppler)
 
     # debug eval
-    print(f"============#debug eval")
+    print("============#debug eval")
 
     # TODO nz=433
     # cube_empty = np.ndarray((nx, ny, nz))
@@ -982,12 +979,11 @@ def test():
     # x0 = cube_noise_doppler
     x0 = model_param_doppler
 
-
-    print(f"calling vmlmb")
+    print("calling vmlmb")
     # def vmlmb_printer(output, iters, evals, rejects, t, x, fx, gx,
     # pgnorm, alpha, fg):
-    print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
-    # ---------------------------------------------------------------------------------
+    # print("# Iter.\tTime (ms)\tEval. Reject.\tObj. Func.\tGrad.\tStep")
+    # -----------------------------------------------------------------
     # besoin fonction objectif (param 1)  gradient (param 2)
     # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
     #         mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
@@ -995,7 +991,7 @@ def test():
                                     blmvm=False, fmin=0,
                                     verb=1, output=sys.stdout)
 
-    print("# Iter.   Time (ms)    Eval. Reject.       Obj. Func.         Grad.       Step")
+    print("# Iter.\tTime (ms)\tEval. Reject.\tObj. Func.\tGrad.\tStep")
     print("res_x for dop")
     print(f"{res_x}")
     # write_fits(res_x, "mycube_res_x_dop.fits")
@@ -1057,11 +1053,11 @@ def test_fit():
     # add noise
     cube_noise_doppler = add_noise(cube_model_doppler, sigma)
 
-    write_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
-    write_fits(cube_noise_doppler, "mycube_doppler_fit.fits")
+    # write_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
+    # write_fits(cube_noise_doppler, "mycube_doppler_fit.fits")
 
     print("check fits")
-    open_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
+    # open_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
     # print("diff noise - model")
     # print(f"{cube_noise_doppler[49,49,:] - cube_model_doppler[49,49,:]}")
 
@@ -1072,7 +1068,7 @@ def test_fit():
     # fitobj_doppler.view(cube_model_doppler)
 
     # debug eval
-    print(f"============#debug eval")
+    print("============#debug eval")
 
     # TODO nz=433
     # cube_empty = np.ndarray((nx, ny, nz))
@@ -1092,7 +1088,7 @@ def test_fit():
     x0_test = model_param_doppler_test
 
     print(f"x0_test {x0_test}")
-    print(f"calling fit function")
+    print("calling fit function")
 
     (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0_test)
 
@@ -1102,51 +1098,6 @@ def test_fit():
     print(f"fx {fx}")
     print(f"gx {gx}")
     print(f"status {status}")
-
-
-def write_fits(cube, cname):
-    fit_hdu = fits.PrimaryHDU(np.transpose(cube, [2, 0, 1]))
-    # fit_hdu = fits.PrimaryHDU(cube)
-    fit_hdul = fits.HDUList([fit_hdu])
-    fit_hdul.writeto(cname, overwrite=True)
-
-
-def open_fits(cube, cname):
-    fit_hdul = fits.open(cname)
-    fit_hdul.info()
-    fit_hdr = fit_hdul[0].header
-    list(fit_hdr.keys())
-
-    cube = fit_hdul[0].data
-    print("open_fits hdul0.data--")
-    print(type(cube))
-    print(cube.ndim)
-    print(cube.shape)
-
-
-def print_array_info(array):
-    print(f'{array=}'.split('=')[0])
-    print(f"array is a ")
-    print(type(array))
-    print(array.shape)
-    print(array.ndim)
-    print("---")
-
-
-def print_array_slice(myarray):
-    size = min(myarray.shape)//2
-    print(f"myarray size-1 {myarray[size-1,size-1,:]}")
-    print(f"myarray size {myarray[size,size,:]}")
-    print(f"myarray size+1 {myarray[size+1,size+1,:]}")
-
-
-def plot_array_slice(myarray):
-    # print(myarray.shape)
-    size = min(myarray.shape)//2
-    plt.figure()
-    plt.imshow(myarray[size, size, :], cmap='gray')
-    plt.colorbar()
-    plt.show()
 
 
 def add_noise(cube, sigma=0.02):
@@ -1214,8 +1165,6 @@ class RegularizationWithNumericalGradient:
 
 
 if __name__ == '__main__':
-    testpourgauss = 0
-    if testpourgauss:
-        test_gauss()
-    else:
-        test_fit()
+    import doctest
+    # doctest.testmod()
+    doctest.testmod(verbose=False, optionflags=doctest.ELLIPSIS)
