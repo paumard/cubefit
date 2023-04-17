@@ -18,7 +18,7 @@
 
 """Create and fit mock data with a single streamer
 
-The object is made of two thin filaments with velocityocity gradient. One
+The object is made of two thin filaments with velocity gradient. One
 is brighter than the other, with SNR above one only for the brighter
 filament (here SNR= peak/stddev). Line width is anti-correlated with
 line flux.
