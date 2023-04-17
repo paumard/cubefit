@@ -349,14 +349,14 @@ class CubeModel:
         return y
 
     def denormalize_parameters(self, x):
-        '''De-apply pscale and poffset from normalized parameters x
+        """De-apply pscale and poffset from normalized parameters x
 
             denormalize paramaters from -1,1 boundaries to physical unit
 
         See Also
         --------
         normalize_parameters
-        '''
+        """
         # Note: self.pscale and poffset are broadcast automatically
         if (self.pscale is None):
             xs = x.copy()
@@ -369,13 +369,13 @@ class CubeModel:
         return xs
 
     def normalize_parameters(self, x):
-        '''Apply pscale and poffset to parameters x
+        """Apply pscale and poffset to parameters x
 
         Parameters
         ----------
         x : aray_like
            the array of parameters to be normalized
-        '''
+        """
         # Note: self.pscale and poffset are broadcast automatically
         x_norm = np.copy(x)
         if self.poffset is not None:
@@ -598,10 +598,10 @@ class CubeModel:
             self._printer_data["tprev"] = t
 
     def criterion(self, x, noscale=False):
-        '''return the criterion of the eval function
+        """return the criterion of the eval function
 
             self.eval(x, noscale=noscale)[0]
-        '''
+        """
         return self.eval(x, noscale=noscale)[0]
 
     def fit(self, x,
@@ -783,385 +783,6 @@ def corr(xy, *grad):
         grad = np.array([1., d, 2])
 
     return res, grad
-
-
-def test_gauss():
-    # debug model
-    print("starting cubefit test gauss....")
-
-    # create a cube
-    nx = 5
-    ny = 5
-    nz = 433
-    nparms = 5
-
-    weight = np.ones((nx, ny, nz))
-
-    cube_gauss = np.ndarray((nx, ny, nz))
-    cube_noise_gauss = np.ndarray((nx, ny, nz))
-
-    # choose parameter for model
-
-    gauss_param = np.array([1, 1, 0.5, 0.5, 0.1])
-    gauss_xdata = np.linspace(-10, 10, nz)
-
-    sigma = 0.02
-
-    print("test gauss call")
-    _ = gauss(gauss_xdata, *gauss_param)[0]
-    # y_noise = y + np.random.standard_normal(y.size) * sigma
-
-    # plt.figure()
-    # plt.plot(gauss_xdata, y)
-    # plt.plot(gauss_xdata, y_noise)
-    # plt.show()
-
-    model_param_gauss = np.full((nx, ny, nparms), gauss_param)
-
-    print(f" model_param_gauss[4,4,:]{model_param_gauss[4,4,:]}")
-
-    fcn_gauss = gauss
-    fcn_x_gauss = gauss_xdata
-
-    print("creating line obj")
-    DopplerLines(lines=gauss_param[0], profile=ngauss)
-
-    # create fit obj
-    print("creating fit obj")
-    fitobj_gauss = CubeModel(cube_gauss, fcn_gauss, fcn_x_gauss, weight)
-
-    # model
-    # cube_model=fitobj.model(cube,a0)
-    print("create model ...")
-    cube_model_gauss = fitobj_gauss.model(model_param_gauss)
-
-    # add noise
-    cube_noise_gauss = add_noise(cube_model_gauss, sigma)
-
-    print("check cube")
-    print(f"{cube_model_gauss[4,4,:]}")
-
-    # on recree un obj cubefit
-    fitobj_eval_gauss = CubeModel(cube_noise_gauss,
-                                  fcn_gauss, fcn_x_gauss, weight)
-
-    # calcul du point de depart x0 les cartes de parametres initiales
-    x0 = model_param_gauss
-    # x0 = gauss_param
-
-    (res_x, fx, gx, status) = vmlmb(fitobj_eval_gauss.eval, x0, mem=x0.size,
-                                    blmvm=False, fmin=0, verb=1,
-                                    output=sys.stdout)
-
-    print(f"fx {fx}")
-    print(f"gx {gx}")
-    print(f"status {status}")
-
-
-def test():
-    """
-    EXAMPLE
-    #fitobj = cubefit(new, cube = cubl(,,indlines), weight = noise,
-    #                 fcn = lineobj.lmfit_func, fcn_x= lineobj,
-    #                 scale=scale, delta=delta, regularization=cubefit.l1l2,
-    #                 pscale=pscale, poffset=poffset, ptweak=myvlsr2vobs)
-        'cube', 'weight', 'fcn', 'fcn_x',
-        'scale', 'delta', 'pscale', 'poffset', and 'ptweak'
-    """
-    # scaling parameters
-    # scale = np.array([1., 1., 1])
-    # print(f"scale {scale}")
-    # delta   =             [ 1.   ,   1. ,   1.   ]
-    # delta = 1./scale
-    # print(f"delta {delta}")
-    # poffset
-    # poffset = np.array([0., 0, 0])
-    # print(f"poffset {poffset}")
-    # pscale
-    # pscale = np.array([5e-5, 100., 40.])
-
-    # debug model
-    print("starting cubefit test....")
-    # create a cube
-    nx = 5
-    ny = 5
-    nz = 433
-
-    print("create model ...")
-    weight = np.ones((nx, ny, nz))
-
-    cube_doppler = np.ndarray((nx, ny, nz))
-    cube_noise_doppler = np.ndarray((nx, ny, nz))
-
-    print("test doppler ...")
-    # choose parameter for model
-    # nlines = 1
-    lines = np.array([2.166120])
-    # lines=np.array([2.166120,2.155])
-
-    doppler_param = np.array([1.2, 0.5, 25., 100])
-    doppler_xdata = np.linspace(2.15, 2.175, nz)
-
-    print("creating line obj")
-    lineobj_doppler = DopplerLines(lines, profile=ngauss)
-
-    print("after doppler init")
-    sigma = 0.5
-    print("test doppler call")
-    lineobj_doppler(doppler_xdata, *doppler_param)[0] \
-        + np.random.standard_normal(nz) * sigma
-
-    model_param_doppler = np.full((nx, ny, doppler_param.size),
-                                  doppler_param)
-
-    # print("creating line obj")
-    # lineobj_doppler = DopplerLines(lines=lines, profile=ngauss)
-
-    # TODO choose return tuple or not
-    # fcn_doppler = lineobj_doppler.curvefit_func
-    fcn_doppler = lineobj_doppler.__call__
-    # fcn_x=a0
-    # important
-    fcn_x_doppler = doppler_xdata
-
-    print("creating fit obj")
-    # create fit obj
-    fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
-                                     fcn_x_doppler, weight)
-    # print(f"cube shape {cube.shape}")
-    # print(f"cube_noise shape {cube_noise.shape}")
-
-    # test more parameters
-    # fitobj=cubefit(cube,cube_noise,fcn,fcn_x,scale, delta,
-    #            pscale,poffset, ptweak,regularization=None,decorrelate=None)
-
-    # model
-    # cube_model=fitobj.model(cube,a0)
-    print("compute model ...")
-    cube_model_doppler = fitobj_doppler_model.model(model_param_doppler)
-
-    # add noise
-
-    cube_noise_doppler = add_noise(cube_model_doppler, sigma)
-
-    # print_array_slice(cube_noise_doppler)
-    # print_array_slice(cube_noise_gauss)
-
-    # write_fits(cube_model_doppler, "mycube_model_doppler.fits")
-    # write_fits(cube_noise_doppler, "mycube_doppler.fits")
-
-    print("check fits")
-    # open_fits(cube_model_doppler, "mycube_model_doppler.fits")
-    # print("diff noise - model")
-    # print(f"{cube_noise_doppler[49,49,:] - cube_model_doppler[49,49,:]}")
-
-    print("check cube")
-    print(f"{cube_model_doppler[4,4,:]}")
-
-    # debug view
-    # fitobj_doppler.view(cube_model_doppler)
-
-    # debug eval
-    print("============#debug eval")
-
-    # TODO nz=433
-    # cube_empty = np.ndarray((nx, ny, nz))
-
-    # on recree un obj cubefit
-    fitobj_eval_doppler = CubeModel(cube_noise_doppler,
-                                    fcn_doppler, fcn_x_doppler, weight)
-
-    # tiré de l exemple
-    # f = eval(f"fitobj_eval.eval")
-    # x0 = f(0, n=n, factor=factor)
-
-    # calcul du point de depart x0 les cartes de parametres initiales
-    # x0 = cube_noise_doppler
-    x0 = model_param_doppler
-
-    print("calling vmlmb")
-    # def vmlmb_printer(output, iters, evals, rejects, t, x, fx, gx,
-    # pgnorm, alpha, fg):
-    # print("# Iter.\tTime (ms)\tEval. Reject.\tObj. Func.\tGrad.\tStep")
-    # -----------------------------------------------------------------
-    # besoin fonction objectif (param 1)  gradient (param 2)
-    # (res_x, fx, gx, status) = vmlmb(lambda x: (f(1, x), f(2, x)), x0,
-    #         mem=x0.size , blmvm=False, fmin=0, verb=1, output=sys.stdout)
-    (res_x, fx, gx, status) = vmlmb(fitobj_eval_doppler.eval, x0, mem=x0.size,
-                                    blmvm=False, fmin=0,
-                                    verb=1, output=sys.stdout)
-
-    print("# Iter.\tTime (ms)\tEval. Reject.\tObj. Func.\tGrad.\tStep")
-    print("res_x for dop")
-    print(f"{res_x}")
-    # write_fits(res_x, "mycube_res_x_dop.fits")
-    # write_fits(fx, "mycube_res_fx_dop.fits")
-    # write_fits(gx, "mycube_res_gx_dop.fits")
-    print(f"fx {fx}")
-    print(f"gx {gx}")
-    print(f"status {status}")
-
-    # def test(probs = range(1, 19),  n=None, factor=None, fmin=0,
-    #    mem="max", verb=1, blmvm=False, output=sys.stdout, **kwds)
-    # test(verb=1, gtol=0, xtol=0, ftol=0, fmin=0, mem="max")
-
-    # from test_fit-Brg4
-    # xl1 = fitobj.fit( xl, verb=1, lower=lower, upper=upper);
-
-
-def test_fit():
-    """
-    implementation of the fit function test
-    """
-    # debug model
-    print("starting cubefit test_fit....")
-    # create a cube
-    nx = 5
-    ny = 5
-    nz = 433
-
-    print("create model ...")
-
-    cube_doppler = np.ndarray((nx, ny, nz))
-    cube_noise_doppler = np.ndarray((nx, ny, nz))
-    weight = np.ones((nx, ny, nz))
-    print("test doppler ...")
-    # nlines = 1
-    lines = np.array([2.166120])
-    doppler_param = np.array([1.2, 0.5, 25., 100])
-    doppler_xdata = np.linspace(2.15, 2.175, nz)
-
-    print("creating line obj")
-    lineobj_doppler = DopplerLines(lines, profile=ngauss)
-
-    sigma = 0.2
-
-    model_param_doppler = np.full((nx, ny, doppler_param.size),
-                                  doppler_param)
-
-    # TODO choose return tuple or not
-    fcn_doppler = lineobj_doppler.__call__
-    fcn_x_doppler = doppler_xdata
-
-    print("creating fit obj")
-    # create fit obj
-    fitobj_doppler_model = CubeModel(cube_doppler, fcn_doppler,
-                                     fcn_x_doppler, weight)
-    # model
-    print("compute model ...")
-    cube_model_doppler = fitobj_doppler_model.model(model_param_doppler)
-    # add noise
-    cube_noise_doppler = add_noise(cube_model_doppler, sigma)
-
-    # write_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
-    # write_fits(cube_noise_doppler, "mycube_doppler_fit.fits")
-
-    print("check fits")
-    # open_fits(cube_model_doppler, "mycube_model_doppler_fit.fits")
-    # print("diff noise - model")
-    # print(f"{cube_noise_doppler[49,49,:] - cube_model_doppler[49,49,:]}")
-
-    print("check cube")
-    print(f"{cube_model_doppler[4,4,:]}")
-
-    # debug view
-    # fitobj_doppler.view(cube_model_doppler)
-
-    # debug eval
-    print("============#debug eval")
-
-    # TODO nz=433
-    # cube_empty = np.ndarray((nx, ny, nz))
-
-    # on recree un obj cubefit
-    fitobj_eval_doppler = CubeModel(cube_noise_doppler,
-                                    fcn_doppler, fcn_x_doppler, weight,
-                                    regularization=l1l2)
-
-    doppler_param_test = np.array([1.1, 1., 25., 100])
-    # doppler_param_test = np.array([1.2, 0.5, 25., 100])
-    model_param_doppler_test = np.full((nx, ny, doppler_param_test.size),
-                                       doppler_param_test)
-
-    # calcul du point de depart x0 les cartes de parametres initiales
-    # x0 = cube_noise_doppler
-    x0_test = model_param_doppler_test
-
-    print(f"x0_test {x0_test}")
-    print("calling fit function")
-
-    (res_x, fx, gx, status) = fitobj_eval_doppler.fit(x0_test)
-
-    print("# Iter.   Time (ms)   Eval. Reject.    Obj. Func.      Grad.  Step")
-    print("res_x for test_fit")
-    print(f"{res_x}")
-    print(f"fx {fx}")
-    print(f"gx {gx}")
-    print(f"status {status}")
-
-
-def add_noise(cube, sigma=0.02):
-    psigma = sigma
-    tmp_cube = np.copy(cube)
-    tmp_cube = cube + np.random.standard_normal(cube.shape) * psigma
-    return tmp_cube
-
-
-def numerical_gradient3(f, x, epsilon=1e-6):
-    '''Compute gradient numerically
-    '''
-    d = x.shape
-    g = np.zeros(d)
-    f0 = f(x)
-    for k in range(d[2]):
-        for j in range(d[2]):
-            for i in range(d[2]):
-                temp = np.copy(x)
-                temp[i, j, k] += epsilon
-                g[i, j, k] = (f(temp)-f0)/epsilon
-    return g
-
-
-class RegularizationWithNumericalGradient:
-    '''Wrapper around a regularization function to provide numerical gradient
-
-    Meant for debugging or prototyping. Gradient should be estimated
-    analitycally whenever possible.
-
-    '''
-
-    def __init__(self, func, epsilon=1e-6):
-        self.func = func
-        self.epsilon = epsilon
-
-    def __call__(self, x, scale=None, delta=None):
-
-        # ensure x is an array and we will not modify the input array
-        x = np.copy(x)
-
-        shape = x.shape
-
-        f0 = self.func(x, scale, delta)
-        if type(f0) is tuple:
-            f0 = f0[0]
-
-        g = np.zeros(shape)
-
-        for j in range(shape[1]):
-            for i in range(shape[0]):
-                val = x[j, i]
-                x[j, i] = val + 0.5*self.epsilon
-                fplus = self.func(x, scale, delta)
-                if type(fplus) is tuple:
-                    fplus = fplus[0]
-                x[j, i] = val - 0.5*self.epsilon
-                fminus = self.func(x, scale, delta)
-                if type(fminus) is tuple:
-                    fminus = fminus[0]
-                x[j, i] = val
-                g[j, i] = (fplus-fminus)/self.epsilon
-
-        return f0, g
 
 
 if __name__ == '__main__':
