@@ -310,7 +310,7 @@ def mp_setx(profile=None, npar=None, ncomp=None,
 # TODO: do we need this func?
 # func mp_getx(x, &profile, &realX, &npar, &ncomp, &equal, &more) {
 def mp_getx(x):
-    '''
+    """
     /* DOCUMENT mp_getx, multiX, profile, realX, npar, ncomp, equal, more
 
         Reverse from mp_setx: get information out of the complex lmfit "X"
@@ -318,7 +318,7 @@ def mp_getx(x):
 
         SEE ALSO: mp_func, mp_seta, mp_setx, multiprofile
     */
-    '''
+    """
 #  profile=_car(x, 1); # _car(list,i) returns the i-th item of the list
 #  realX  =_car(x, 2);
 #  npar   =_car(x, 3);
@@ -504,7 +504,7 @@ def poly_lmfit(x, a, deriv=None):
 
 def ol_setx(profile=None, realX=None, lines=None, positivity=None,
             intensities=None, fixedratio=None):
-    '''Set up X parameter for offsetlines().
+    """Set up X parameter for offsetlines().
 
     Parameters
     ----------
@@ -530,7 +530,7 @@ def ol_setx(profile=None, realX=None, lines=None, positivity=None,
 
     See Also:
     offsetlines
-    '''
+    """
 
     if (profile is None):
         # see https://docs.astropy.org/en/stable/modeling/reference_api.html
@@ -555,7 +555,7 @@ def ol_setx(profile=None, realX=None, lines=None, positivity=None,
 
 
 def offsetlines(x, a, deriv=None, returncomps=None):
-    '''Fit several lines of identical shape over a spectrum, sharing a
+    """Fit several lines of identical shape over a spectrum, sharing a
      common displacement (for instance Doppler shift, if the
      wavelength range is short enough).
 
@@ -623,7 +623,7 @@ def offsetlines(x, a, deriv=None, returncomps=None):
       See Also
       --------
       ol_setx, lmfit, multiprofile, moffat1d.
-    '''
+    """
 
     profile = x[0]
     realX = x[1]

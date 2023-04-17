@@ -16,7 +16,7 @@
 #    with this program; if not, write to the Free Software Foundation, Inc.,
 #    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 
-'''Single-line spectral models
+"""Single-line spectral models
 
 Each profile has the following signature:
   ydata, jacobian = profile(xdata, *parameters)
@@ -25,13 +25,13 @@ Wrappers are provided to use these profiles with
 scipy.optimize.curve_fit (WrapToCurveFit) and to use functions
 designed for curve fit with cubefit (WrapFromCurveFit), as well as to
 use astropy.modeling profiles (WrapFromAstropy).
-'''
+"""
 
 import numpy as np
 from math import sqrt
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
-from scipy import optimize
+# from scipy import optimize
 
 # for plotting
 # from astropy.visualization import astropy_mpl_style
@@ -156,7 +156,7 @@ def gauss(x, *a):
 
 
 def ngauss(x, *a):
-    '''Compute a normalized Gaussian profile.
+    """Compute a normalized Gaussian profile.
 
     Parameters
     ----------
@@ -231,7 +231,7 @@ def ngauss(x, *a):
     See also
     --------
     cubefit.lineprofiles.gauss
-    '''
+    """
 
     # ensure a and x are numpy arrays and not some other array_like
     # promote to at least float64
@@ -263,7 +263,7 @@ def ngauss(x, *a):
 
 
 def moffat(x, *a):
-    '''Compute a Moffat profile.
+    """Compute a Moffat profile.
 
     Parameters
     ----------
@@ -317,7 +317,7 @@ def moffat(x, *a):
     See Also
     --------
     cubefit.lineprofiles.ngauss, asmoffat
-    '''
+    """
     __moffat_betamax = None
     __moffat_vmax = None
     __moffat_gradmax = None
@@ -393,7 +393,7 @@ def moffat(x, *a):
 
 
 def asmoffat(x, *a):
-    '''Compute an asymmetrical Moffat profile
+    """Compute an asymmetrical Moffat profile
 
     Compute a (1D) asymmetrical Moffat profile:
     I=I0*(1+((x-x0)/dx)^2)^-b [+ k0 [+ k1*x]]
@@ -433,7 +433,7 @@ def asmoffat(x, *a):
     See Also
     --------
     moffat
-    '''
+    """
     a = np.asarray(a)
     a = np.promote_types(a.dtype, np.float64).type(a)
     x = np.asarray(x)
@@ -530,29 +530,29 @@ def asmoffat(x, *a):
 
 
 class WrapToCurveFit:
-    '''Wrap a cubefit profile to a curve_fit objective function
+    """Wrap a cubefit profile to a curve_fit objective function
 
     Parameters
     ----------
     profile : callable
         A curvefit.lineprofiles profile.
-    '''
+    """
     def __init__(self, profile):
         self.profile = profile
 
     def __call__(self, xdata, *params):
-        '''self(xdata, *params) -> self.profile(xdata, *params)[0]
-        '''
+        """self(xdata, *params) -> self.profile(xdata, *params)[0]
+        """
         return self.profile(xdata, *params)[0]
 
     def jac(self, xdata, *params):
-        '''self.jac(xdata, *params) -> self.profile(xdata, *params)[1]
-        '''
+        """self.jac(xdata, *params) -> self.profile(xdata, *params)[1]
+        """
         return self.profile(xdata, *params)[1]
 
 
 class WrapFromCurveFit:
-    '''Wrap a curve_fit objective function as a cubefit profile
+    """Wrap a curve_fit objective function as a cubefit profile
 
     Parameters
     ----------
@@ -567,16 +567,16 @@ class WrapFromCurveFit:
     --------
     scipy.optimize.curve_fit
     cubefit.lineprofiles.numerical_jacobian
-    '''
+    """
     def __init__(self, f, jac=None, epsilon=1e-6):
         self.f = f
         self.jac = jac
         self.epsilon = epsilon
 
     def __call__(self, xdata, *params):
-        ''' self(xdata, *params) ->
+        """ self(xdata, *params) ->
                              (self.f(xdata, *params), self.jac(xdata, *params))
-        '''
+        """
         val = self.f(xdata, *params)
         if self.jac is None:
             jac = numerical_jacobian(self.f, xdata, *params,
@@ -587,7 +587,7 @@ class WrapFromCurveFit:
 
 
 class WrapFromAstropy:
-    '''Wrap an astropy.modeling objective function as a cubefit profile
+    """Wrap an astropy.modeling objective function as a cubefit profile
 
     Uses m.evaluate and m.fit_deriv, falling back to
     numerical_jacobian if the latter is None.
@@ -631,15 +631,15 @@ class WrapFromAstropy:
     astropy.modeling
     numerical_jacobian
 
-    '''
+    """
 
     def __init__(self, m, epsilon=1e-6):
         self.m = m
         self.epsilon = epsilon
 
     def __call__(self, xdata, *params):
-        ''' self(xdata, *params) -> ydata, jacobian
-        '''
+        """ self(xdata, *params) -> ydata, jacobian
+        """
         ydata = self.m.evaluate(xdata, *params)
         if self.m.fit_deriv is None:
             jacobian = numerical_jacobian(self.m.evaluate, xdata, *params,
@@ -650,7 +650,7 @@ class WrapFromAstropy:
 
 
 def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
-    '''Compute Jacobian matrix of a curve_fit model function
+    """Compute Jacobian matrix of a curve_fit model function
 
     Parameters
     ----------
@@ -675,7 +675,7 @@ def numerical_jacobian(f, xdata, *params, epsilon=1e-6):
     See Also
     --------
     scipy.optimize.curve_fit
-    '''
+    """
     params = np.asarray(params, dtype=np.float64)
     if np.isscalar(xdata):
         xdata = np.float64(xdata)
