@@ -38,6 +38,34 @@ from math import sqrt
 # from astropy.utils.data import get_pkg_data_filename
 
 
+class LineProfile:
+    """
+    One dimensional profile model.
+
+    Parameters
+    ----------
+    x : array_like
+        Independent variable, for instance wavelengths for which the
+        profile must be computed.
+    a : array_like
+        Parameters of the Gaussian: (I0, x0, dx [, offset [, slope]]) with:
+
+    See Also
+    --------
+    Gaussian, NGaussian, Moffat
+
+    """
+    def __init__(self, x, *a):
+        self.x = x
+        self.a = a
+
+    def __str__(self):
+        print("LineProfile:")
+        print(f"\tprofile parameters: {self.a}")
+        print(f"\ton domain min: {self.x[0]} max: {self.x[-1]}")
+
+
+
 # DONE ajout boolean switch deriv if deriv return res, grad ?
 # def gauss(x, *a, deriv):
 def gauss(x, *a):

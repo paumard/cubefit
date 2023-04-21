@@ -43,10 +43,78 @@ def add_noise(cube, sigma=0.02):
     tmp_cube = cube + rng.standard_normal(cube.shape) * psigma
     return tmp_cube
 
+    def helper_cubemodel_create(self, **model_kwargs):
+        """Helper for CubeModel initialization
+
+        pass a dict to create the cube we wanted
+
+        Parameters
+        ----------
+        **model_kwargs : dict
+            The dict with all the specific paramaters to construct
+            the cubemodel to create.
+            default to shape "(5, 4, 433)", profile "gauss" with  parameters:
+                        xreal_1d = [1.2, 0.5, 25., 100]
+                        xreal = np.full((nx, ny, len(xreal_1d)), xreal_1d)
+
+        Returns
+        -------
+        cubemodel
+            the cubemodel to test
+
+        Raises
+        ------
+        ValueError
+            when an inconsistency is detected between the value of
+            parameter
+
+        """
+        # get from the dict profile,regularization,pscale,offset
+        try:
+            # Shape of data cube (nx, ny, nz)
+            nx, ny, nz = model_kwargs['shape']
+        except (ValueError, KeyError):
+            # raise CustomException('must provide a shape to use this helper')
+            nx, ny, nz = 5, 4, 433
+
+        try:
+            # get from the dict the type profile
+            which_profile = model_kwargs['profile']
+        except KeyError:
+            which_profile = gauss
+
+        try:
+            # get from the dict the type regularization
+            which_regularization = model_kwargs['regularization']
+        except KeyError:
+            which_regularization = markov
+
+        try:
+            # get from the dict the scale
+            which_scale = model_kwargs['scale']
+        except KeyError:
+            which_scale = None
+
+        try:
+            # get from the dict the delta
+            which_delta = model_kwargs['delta']
+        except KeyError:
+            which_delta = None
+
+        # Model we want to test
+        doppler_profile = DopplerLines(2.166120, profile=which_profile)
+        doppler_profile_xdata = np.linspace(2.15, 2.175, nz)
+        model = CubeModel((nx, ny, nz), profile=doppler_profile,
+                          profile_xdata=doppler_profile_xdata,
+                          regularization=which_regularization,
+                          scale=which_scale, delta=which_delta, framedelay=-1)
+        return model
+
 
 class TestCubemodel(unittest.TestCase):
     '''UnitTest class to test gauss function
     '''
+
     def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None,
                        diflim=None, **kwargs):
         if diflim is None:
@@ -112,70 +180,8 @@ class TestCubemodel(unittest.TestCase):
         self.check_gradient(model.eval, xtest, epsilon=[1e-2, 1e3, 1., 1.],
                             diftol=1e-2)
 
-    def helper_cubemodel_create(self, **model_kwargs):
-        """Helper for CubeModel initialization
-
-        pass a dict to create the cube we wanted
-
-        Parameters
-        ----------
-        **model_kwargs : dict
-            The dict with all the specific paramaters to construct
-            the cubemodel to create.
-            default to shape "(5, 4, 433)", profile "gauss"
-
-        Returns
-        -------
-        cubemodel
-            the cubemodel to test
-
-        Raises
-        ------
-        ValueError
-            when an inconsistency is detected between the value of
-            parameter
-
-        """
-        # get from the dict profile,regularization,pscale,offset
-        try:
-            # Shape of data cube (nx, ny, nz)
-            nx, ny, nz = model_kwargs['shape']
-        except (ValueError, KeyError):
-            # raise CustomException('must provide a shape to use this helper')
-            nx, ny, nz = 5, 4, 433
-
-        try:
-            # get from the dict the type profile
-            which_profile = model_kwargs['profile']
-        except KeyError:
-            which_profile = gauss
-
-        try:
-            # get from the dict the type regularization
-            which_regularization = model_kwargs['regularization']
-        except KeyError:
-            which_regularization = markov
-
-        try:
-            # get from the dict the scale
-            which_scale = model_kwargs['scale']
-        except KeyError:
-            which_scale = None
-
-        try:
-            # get from the dict the delta
-            which_delta = model_kwargs['delta']
-        except KeyError:
-            which_delta = None
-
-        # Model we want to test
-        doppler_profile = DopplerLines(2.166120, profile=which_profile)
-        doppler_profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel((nx, ny, nz), profile=doppler_profile,
-                          profile_xdata=doppler_profile_xdata,
-                          regularization=which_regularization,
-                          scale=which_scale, delta=which_delta, framedelay=-1)
-        return model
+    def test_cubemodel_gradient_with_scale_delta(self):
+        model = self.helper_cubemodel_create()
 
     def helper_cubemodel_fit(self, model, shape, xreal, xtest, sigma,
                              **fit_kwargs):

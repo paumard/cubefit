@@ -256,6 +256,10 @@ class CubeModel:
         # TODO ajout dict debug, monitor pour returnmaps voir plus
         self.dbg_data = {}
 
+    def __str__(self):
+        print("CubeModel :")
+
+
     def view(self, x, noscale=None):
         """ View a CUBEFIT patameter maps.
 
