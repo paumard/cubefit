@@ -332,7 +332,7 @@ class CubeModel:
         params_dim = params.shape
 
         if noscale:
-            xs = params
+            xs = np.copy(params)
         else:
             xs = self.denormalize_parameters(params)
 
@@ -473,6 +473,8 @@ class CubeModel:
             if self.dbg:
                 print("DBG xs after ptweak:")
                 print(xs)
+                print("DBG x after ptweak:")
+                print(x)
         else:
             self.derivatives = None
 
@@ -509,7 +511,7 @@ class CubeModel:
         xbig = np.zeros((d[0]*2, d[1]*2, d[2]))
         xbig[:d[0], :d[1], :] = x
         xbig[:d[0], d[1]:, :] = np.flip(x, 1)
-        xbig[d[0]:, :, :] = xbig[d[0]:0:-1, :, :]
+        xbig[d[0]:, :, :] = xbig[d[0]-1::-1, :, :]
 
         self._eval_data["regul"] = np.zeros(d[2])
         for k in range(d[2]):
@@ -525,7 +527,7 @@ class CubeModel:
 
             # TODO returnmaps
                 if (self.dbg):
-                    self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
+                    #self.dbg_data["maps"][:, :, k] = tmp[:d[0], :d[1]]
                     print(f"g after regul {g}")
                     print(f"g is a {g.shape}")
 
