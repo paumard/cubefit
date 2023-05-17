@@ -65,7 +65,6 @@ class LineProfile:
         print(f"\ton domain min: {self.x[0]} max: {self.x[-1]}")
 
 
-
 # DONE ajout boolean switch deriv if deriv return res, grad ?
 # def gauss(x, *a, deriv):
 def gauss(x, *a):
@@ -142,12 +141,129 @@ def gauss(x, *a):
     cubefit.lineprofiles.ngauss
 
     """
+    a = np.asarray(a, dtype=np.float64)
+    x = np.asarray(x, dtype=np.float64)
+
+    nterms = a.size
+
+    if nterms < 3:
+        raise Exception("gauss() needs at least 3 parameters")
+
+    eps = 1e-100
+    # a[2] = np.clip(a[2], -eps, eps)
+    if (abs(a[2]) < eps):
+        a[2] = np.sign(a[2])*eps
+
+    if (a[2] == 0):
+        u1 = 0
+    else:
+        u1 = np.exp(-0.5*((x-a[1])/a[2])**2)
+
+    # u1 = np.exp(-0.5 * ((x - a[1]) / a[2])**2)
+
+    res = a[0] * u1
+
+    grad = np.zeros(np.shape(x) + (nterms,))
+    # grad = np.zeros((*np.shape(x), nterms))
+    grad[..., 0] = u1
+    grad[..., 1] = res * (x - a[1]) / a[2]**2
+    grad[..., 2] = res * (x - a[1])**2 / a[2]**3
+    if nterms > 3:
+        grad[..., 3] = 1.
+    if nterms == 5:
+        grad[..., 4] = x
+
+    if nterms > 3:
+        res += a[3]
+
+    if nterms == 5:
+        res += a[4] * x
+
+    return res, grad
+
+
+# DONE ajout boolean switch deriv if deriv return res, grad ?
+# def gauss(x, *a, deriv):
+def old_gauss(x, *a):
+    """Compute a Gaussian profile.
+
+    Parameters
+    ----------
+    x : array_like
+        Independent variable, for instance wavelengths for which the
+        profile must be computed.
+    a : array_like
+        Parameters of the Gaussian: (I0, x0, dx [, offset [, slope]]) with:
+        I0: peak value
+        x0: center
+        dx: Gaussian standard deviation
+        offset (optional): constant offset
+        slope (optional): linear offset
+
+    Returns
+    -------
+    ydata : array_like
+        The values of the Gaussian with paramaters a computed at
+        x. Same shape as x.
+    jac : array like
+        The Jacobian matrix of the model, with shape x.size × a.size
+        (if x is a 1D array) or a.size (if x is a scalar).
+
+    Notes
+    -----
+    Returns a Gaussian:
+        I0*exp(-0.5*((x-x0)/dx)**2) [+a[3] [+a[4]*x]]
+    Where:
+        I0=a[0]
+        x0=a[1]
+        dx=a[2] (gaussian sigma)
+
+    FHWM=sigma*2*sqrt(2*alog(2)); sum(gauss)=I0*sigma*sqrt(2*pi)
+
+    Examples
+    --------
+    >>> import numpy as np
+    >>> a = np.array([1, 1, 0.5, 0.5, 0.1])
+    >>> x = np.linspace(-10, 10, 5)
+    >>> ret, ret_jac = gauss(x, *a)
+    >>> print(f"{ret}")
+    [-0.5         0.          0.63533528  1.          1.5       ]
+    >>> print(f"{ret_jac}")
+    [[ 7.95674389e-106 -3.50096731e-104  7.70212809e-103  1.00000000e+000
+      -1.00000000e+001]
+     [ 5.38018616e-032 -1.29124468e-030  1.54949361e-029  1.00000000e+000
+      -5.00000000e+000]
+     [ 1.35335283e-001 -5.41341133e-001  1.08268227e+000  1.00000000e+000
+       0.00000000e+000]
+     [ 1.26641655e-014  2.02626649e-013  1.62101319e-012  1.00000000e+000
+       5.00000000e+000]
+     [ 4.40853133e-071  1.58707128e-069  2.85672830e-068  1.00000000e+000
+       1.00000000e+001]]
+
+    # >>> import matplotlib.pyplot as plt
+    # >>> plt.figure()
+    # <...
+    # >>> plt.plot(x, ret)
+    # [...
+    # >>> plt.figure()
+    # <...
+    # >>> plt.plot(x, ret_jac)
+    # [...
+    # >>> plt.show()
+    # >>> plt.close()
+
+
+    See Also
+    --------
+    cubefit.lineprofiles.ngauss
+
+    """
     # ensure a and x are numpy arrays and not some other array_like
     # promote to at least float64
-    a = np.asarray(a)
-    a = np.promote_types(a.dtype, np.float64).type(a)
-    x = np.asarray(x)
-    x = np.promote_types(x.dtype, np.float64).type(x)
+    a = np.asarray(a, dtype=np.float64)
+    # a = np.promote_types(a.dtype, np.float64).type(a)
+    x = np.asarray(x, dtype=np.float64)
+    # x = np.promote_types(x.dtype, np.float64).type(x)
 
     nterms = a.size
 
