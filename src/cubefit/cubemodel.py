@@ -502,7 +502,7 @@ class CubeModel:
                     if (self.dbg):
                         self.dbg_data["maps"][i, j, 0] = sum(atom**2)
 
-                    res += sum(atom**2)
+                    res += np.sum(atom**2)
                     gx[i, j, :] += 2. * np.sum(
                                         (grad * atom[:, np.newaxis] *
                                          self.weight[i, j, :][:, np.newaxis]),
@@ -514,6 +514,7 @@ class CubeModel:
         xbig[:d[0], :d[1], :] = x
         xbig[:d[0], d[1]:, :] = np.flip(x, 1)
         xbig[d[0]:, :, :] = xbig[d[0]-1::-1, :, :]
+        # ? xbig[d[0]:, :, :] = xbig[d[0]:0:-1, :, :]
 
         self._eval_data["regul"] = np.zeros(d[2])
         for k in range(d[2]):
@@ -554,10 +555,11 @@ class CubeModel:
                 i1 = np.floor(self.decorrelate[1, pair])
                 i2 = np.floor(self.decorrelate[2, pair])
                 w = self.decorrelate[2, pair]
-                if (dd.shape[1] >= 4):
-                    pow = self.decorrelate[4, pair]
-                else:
-                    pow = 2
+                pow = self.decorrelate[4, pair] if dd.shape[1] >= 4 else 2
+                # if (dd.shape[1] >= 4):
+                #    pow = self.decorrelate[4, pair]
+                #else:
+                #    pow = 2
                 xy = x[:, :, [i1, i2]]
                 # TODO
                 correl = CubeModel.corr(xy, grad, deriv=1)
