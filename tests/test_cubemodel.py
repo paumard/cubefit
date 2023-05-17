@@ -184,7 +184,6 @@ class TestCubemodel(unittest.TestCase):
             self.assertTrue(maxdif < diftol, f"Gradient is not within absolute\
             tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
 
->>>>>>> c590a49 (add little optimization + profiling streamers)
     def test_cubemodel_eval_no_data_raises(self):
         '''Check that CubeModel.eval raises an error when self.data is not set
         '''
