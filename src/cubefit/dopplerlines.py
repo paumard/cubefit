@@ -120,6 +120,88 @@ class DopplerLines():
         --------
         dopplerlines, oxy
         """
+        vel = params[self.nlines]
+        dvel = params[self.nlines+1]
+        more = np.array([])
+
+        if len(params) > self.nlines + 2:
+            more = np.array(params[self.nlines+2:])
+
+        lambda1 = self.lines * (1 + vel * self.c_1)
+        # lambda1b = np.multiply((1 + vel * self.c_1), self.lines)
+
+        widths = lambda1 * dvel * self.c_1
+
+        model = np.zeros(xdata.shape)
+        grad = np.zeros((len(params), *xdata.shape), dtype=float)
+
+        aa = np.zeros((3 + more.size))
+
+        for k in range(self.nlines):
+            aa[0] = params[0][k] if np.size(params[0]) > 1 else params[k]
+            aa[1] = lambda1[k]
+            aa[2] = widths[k]
+            if more.size > 0:
+                aa[3:] = more
+
+            if self.relative is not None and k != self.relative:
+                aa[1] *= params[self.relative]
+
+            acc_model, t_agrad = self.profile(xdata, *aa)
+            model += acc_model
+            agrad = np.transpose(t_agrad, [1, 0])
+
+            if self.relative is not None:
+                if k == self.relative:
+                    grad[k, :] += agrad[0, :]
+                else:
+                    grad[self.relative, :] += params[k] * agrad[0, :]
+                    grad[k, :] = params[self.relative] * agrad[0, :]
+            else:
+                grad[k, :] = agrad[0, :]
+
+            grad[self.nlines, :] += np.asarray(self.lines)[k] * self.c_1 * agrad[1, :]
+            grad[self.nlines+1, :] += lambda1[k] * self.c_1 * agrad[2, :]
+
+            if more.size > 0:
+                grad[self.nlines+2:, :] += agrad[3:, :]
+
+        return model, np.transpose(grad, [1, 0])
+
+
+    # In this optimized version, I made the following changes:
+
+    # Removed unnecessary comments and print statements.
+    # Removed redundant assignment of lambda1 using np.zeros.
+    # Simplified the computation of lambda1 and lambda1b using array multiplication.
+    # Avoided using np.append to append elements to more by directly assigning the sliced array.
+    # Removed duplicate transpose operation on agrad.
+    # Simplified the condition checks by removing unnecessary parentheses.
+    # Replaced len(params) with a pre-calculated variable self.nlines for better performance.
+
+
+    def old_call(self, xdata, *params):
+        # def __call__(self, xdata, *params):
+        """Evaluate model
+
+        Parameters
+        ----------
+        xdata : array_like
+        params : array_like
+
+        Examples
+        --------
+        >>> sigma = 0.5
+        >>> lines = 2.166120
+        >>> waxis = np.linspace(2.15, 2.175, 100)
+        >>> dop = DopplerLines(lines)
+        >>> a = np.array([1.2, 25., 100.])
+        >>> y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
+
+        See Also
+        --------
+        dopplerlines, oxy
+        """
 
         vel = params[self.nlines]
         dvel = params[self.nlines+1]

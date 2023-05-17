@@ -45,7 +45,7 @@ def add_noise(cube, sigma=0.02):
 
 
 class TestCubemodel(unittest.TestCase):
-    '''UnitTest class to test gauss function
+    '''UnitTest class to test Cubemodel functions
     '''
 
     def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None,
@@ -81,6 +81,7 @@ class TestCubemodel(unittest.TestCase):
             maxdif = np.max(difval[cond])
             self.assertTrue(maxdif < diftol, f"Gradient is not within absolute\
             tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
+
 
     def helper_cubemodel_create(self, **model_kwargs):
         """Helper for CubeModel initialization
@@ -149,6 +150,41 @@ class TestCubemodel(unittest.TestCase):
                           scale=which_scale, delta=which_delta, framedelay=-1)
         return model
 
+    def check_gradient(self, f, x, epsilon=1e-6, reltol=1e-3, diftol=None,
+                       diflim=None, **kwargs):
+        if diflim is None:
+            diflim = np.min(epsilon)
+        if diftol is None:
+            diftol = diflim*reltol
+        d = x.shape
+        if np.isscalar(epsilon):
+            epsilon = np.ones(d[2])*epsilon
+        g = np.zeros(d)
+        f0, g0 = f(x, **kwargs)
+        for k in range(d[2]):
+            for j in range(d[1]):
+                for i in range(d[0]):
+                    temp = np.copy(x)
+                    temp[i, j, k] += 0.5*epsilon[k]
+                    fp, gp = f(temp, **kwargs)
+                    temp[i, j, k] -= epsilon[k]
+                    fm, gm = f(temp, **kwargs)
+                    # this is (f(x+h/2)-f(x-h/2))/h
+                    g[i, j, k] = (fp-fm)/epsilon[k]
+        absval = 0.5*np.abs(g+g0)
+        difval = np.abs(g-g0)
+        cond = absval > diflim
+        if np.any(cond):
+            maxrel = np.max(difval[cond]/absval[cond])
+            self.assertTrue(maxrel < reltol, f"Gradient is not within relative\
+            tolerance (max: {maxrel}, reltol: {reltol}, diflim: {diflim})")
+        cond = absval <= diflim
+        if np.any(cond):
+            maxdif = np.max(difval[cond])
+            self.assertTrue(maxdif < diftol, f"Gradient is not within absolute\
+            tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
+
+>>>>>>> c590a49 (add little optimization + profiling streamers)
     def test_cubemodel_eval_no_data_raises(self):
         '''Check that CubeModel.eval raises an error when self.data is not set
         '''

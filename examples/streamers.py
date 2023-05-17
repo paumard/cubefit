@@ -31,6 +31,11 @@ regularization until SNR~0.5 on this example with very crude initial
 guess.
 """
 
+import cProfile
+import pstats
+import io
+from pstats import SortKey
+
 import numpy as np
 from matplotlib import pyplot as plt
 from cubefit.dopplerlines import DopplerLines
@@ -41,6 +46,20 @@ from cubefit.lineprofiles import gauss, ngauss
 l1l2_num = RegularizationWithNumericalGradient(l1l2)
 
 DEBUG = False
+PROF = True
+
+if PROF:
+    pr = cProfile.Profile()
+
+
+def print_profiling_results(string_context, pr):
+    print(f"profiling result for {string_context}")
+    s = io.StringIO()
+    sortby = SortKey.CUMULATIVE
+    ps = pstats.Stats(pr, stream=s).sort_stats(sortby)
+    ps.print_stats()
+    print(s.getvalue())
+
 
 # regularizations=[l1l2_num]
 regularizations = [None, markov, l1l2, l1l2_num]
@@ -99,7 +118,15 @@ vaxis = (waxis-w0)/w0*profile.light_speed
 
 # Parameters for "true" cube. Can be 1D or 3D.
 xreal = np.transpose(np.asarray([intensity, velocity, dvelocity]), (1, 2, 0))
+
+if PROF:
+    pr.enable()
+
 reality = model_none.model(xreal)
+
+if PROF:
+    pr.disable()
+    print_profiling_results("model computing real values", pr)
 
 # Sigma of errors to add to "true" cube to get "observational" data
 sigma = 0.2*np.max(reality)
@@ -150,6 +177,16 @@ model_none.view_more = view_more
 model_none.view(xtest, noscale=True)
 model_none.view_data["fig"] = None  # detach figure
 
+
+if PROF:
+    pr.enable()
+
+    profile(waxis, *xtest_1d)[0]
+
+    pr.disable()
+    print_profiling_results("profile(waxis,...) computing real values", pr)
+
+
 if DEBUG:
     fig = plt.figure()
     plt.plot((waxis-w0)/w0*profile.light_speed, reality[6, 10, :],
@@ -187,6 +224,14 @@ if None in regularizations:
     model_none.view_data["imshow_kwds"] = imshow_kwds
 
     res_x_none, fx_none, gx_none, status_none = model_none.fit(xtest)
+
+    if PROF:
+        pr.enable()
+
+        res_x_none, fx_none, gx_none, status_none = model_none.fit(xtest)
+
+        pr.disable()
+        print_profiling_results("fit(xtest) computing ", pr)
 
     # Compute model cube
     model_none_cube = model_none.model(res_x_none)
@@ -233,6 +278,16 @@ if markov in regularizations:
 
     model_markov.view_more = view_more
     model_markov.view_data["imshow_kwds"] = imshow_kwds
+
+    if PROF:
+        pr.enable()
+
+        res_x_markov, fx_markov, gx_markov, \
+        status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
+
+        pr.disable()
+        print_profiling_results("fit(xtest) computing ", pr)
+
 
     res_x_markov, fx_markov, gx_markov, \
         status_markov = model_markov.fit(xtest, ftol=1e-10, xtol=1e-8)
@@ -299,6 +354,16 @@ if l1l2_num in regularizations:
 
     model_l1l2_num.view_more = view_more
     model_l1l2_num.view_data["imshow_kwds"] = imshow_kwds
+
+    if PROF:
+        pr.enable()
+
+        res_x_l1l2_num, fx_l1l2_num, gx_l1l2_num,\
+        status_l1l2_num = model_l1l2_num.fit(xtest)
+
+        pr.disable()
+        print_profiling_results("fit(xtest) computing ", pr)
+
 
     res_x_l1l2_num, fx_l1l2_num, gx_l1l2_num,\
         status_l1l2_num = model_l1l2_num.fit(xtest)

@@ -487,10 +487,12 @@ class CubeModel:
                     spectrum = self.data[i, j, :]
                     model, model_jacobian = self.profile(self.profile_xdata,
                                                          *xs[i, j, :])
-                    grad = model_jacobian
-                    if (self.pscale is not None):
-                        for k in range(self.profile_xdata.size):
-                            grad[k, :] *= self.pscale
+                    grad = model_jacobian * self.pscale if self.pscale is not None else model_jacobian
+
+                    #grad = model_jacobian
+                    #if (self.pscale is not None):
+                    #    for k in range(self.profile_xdata.size):
+                    #        grad[k, :] *= self.pscale
 
                     if (self.derivatives is not None):
                         grad *= self.derivatives[i, j, np.newaxis, :]
