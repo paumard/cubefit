@@ -46,7 +46,7 @@ from cubefit.lineprofiles import gauss, ngauss
 l1l2_num = RegularizationWithNumericalGradient(l1l2)
 
 DEBUG = False
-PROF = True
+PROF = False
 
 if PROF:
     pr = cProfile.Profile()
