@@ -138,7 +138,8 @@ class DopplerLines():
         aa = np.zeros((3 + more.size))
 
         for k in range(self.nlines):
-            aa[0] = params[0][k] if np.size(params[0]) > 1 else params[k]
+            # aa[0] = params[0][k] if np.size(params[0]) > 1 else params[k]
+            aa[0] = params[0, k] if np.size(params[0]) > 1 else params[k]
             aa[1] = lambda1[k]
             aa[2] = widths[k]
             if more.size > 0:
@@ -239,7 +240,8 @@ class DopplerLines():
 
         for k in range(self.nlines):
             if np.size(params[0]) > 1:
-                aa[0] = params[0][k]
+                # aa[0] = params[0][k]
+                aa[0] = params[0, k]
             else:
                 aa[0] = params[k]
             aa[1] = lambda1[k]
