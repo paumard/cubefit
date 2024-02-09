@@ -100,6 +100,61 @@ from scipy import optimize
     offsetlines, ol_setx
 """
 
+class MultiProfile:
+    '''Manage multiple profile
+
+    Parameters
+    ----------
+    profiles : callable or tuplet of callables
+        One or several curvefit.lineprofiles profiles.
+    nterms : int
+        Number of parameters for each profile
+    ncomps : int
+        Number of components of each profile
+    '''
+    def __init__(self, profiles, nterms, ncomps, equals):
+        # Ensure all parameters are in arrays
+        self.profiles = np.atleast_1d(profiles)
+        self.nterms   = np.atleast_1d(nterms)
+        self.ncomps   = np.atleast_1d(ncomps)
+        self.equals   = np.atleast_1d(equals)
+        self.nterms_tot = np.sum(self.nterms*self.ncomps)
+
+    def __call__(self, xdata, *params):
+        '''self(xdata, *params) -> ydata, jacobian 
+        Suitable as profile for CubeModel.
+        '''
+        assert len(params) == self.nterms_tot, "Wrong number of parameters" 
+
+        params=np.asarray(params)
+
+        ydata=np.zeros_like(xdata)
+        jacobian=np.zeros(ydata.shape + np.asarray(params).shape)
+
+        curp=0
+        for k in range(len(self.profiles)):
+            profile=self.profiles[k]
+            nparms=self.nterms[k]
+            nc=self.ncomps[k]
+            for c in range(nc):
+                y, j = profile(xdata, *params[curp:curp+nparms])
+                ydata += y
+                jacobian[..., curp:curp+nparms] = j
+                curp += nparms
+
+        return ydata, jacobian
+
+    def cf_func(self, xdata, *params):
+        '''self.cf_func(xdata, *params) -> ydata
+        Suitable as objective function for curve_fit
+        '''
+        return self(xdata, *params)[0]
+
+    def cf_jac(self, xdata, *params):
+        '''self.jac() -> profile_jac
+        Suitable as jac parameter for curve_fit
+        '''
+        return self(xdata, *params)[1]
 
 # func mp_func(x,a,&grad,&comps,deriv=,returncomps=){
 def mp_func(x, *a):
@@ -410,54 +465,34 @@ def mp_seta(params, equal=None, more=None, get=None):
 # func linear(x,a,&grad,deriv=) {
 
 
-def linear(x, a, deriv=None):
+def poly(xdata, *params):
+    """ Return a polynomial function and its Jacobian
+
+    ydata = params[0] + ...+  params[k] * xdata**k
+
+
     """
-     DOCUMENT linear(x,a)
-         or linear(x,a,grad,deriv=1)
+    nterms = len(params) # nterms = degree + 1
 
-    a(1)+x*a(2)
+    # x**0
+    ydata = np.full_like(xdata, params[0])
+    jacobian = np.zeros(ydata.shape + (nterms,))
 
-    Returns derivatives if DERIV set to a "true" value. Very
-    simplistic, but might come in handy, as it is compatible with
-    lmfit (and multiprofile).
+    if nterms > 1:
+        # x**1
+        ydata += params[1] * xdata
+        jacobian[..., 1] = xdata
 
-    SEE ALSO: linear2d, poly_lmfit, lmfit, multiprofile
-    """
-    if (deriv):
-        grad = np.array([np.ones(x.shape), x])
+        if nterms > 2:
+            xpow = np.copy(xdata)
 
-    # TODO: return grad ?
-    return a[1]+a[2]*x
+        # x**2 and above
+        for k in range(2, nterms):
+            xpow *= xdata
+            ydata += params[k] * xpow
+            jacobian[..., k] = xpow
 
-# func linear2d(xy,a,&grad,deriv=) {
-
-
-def linear2d(xy, a, deriv=None):
-    """
-    DOCUMENT linear2d(xy,a)
-         or linear2d(xy,a,grad,deriv=1)
-
-    a(1)+x*a(2)+y*a(3) where x=xy(..,1); y=xy(..,2).
-
-    Returns derivatives if DERIV set to a "true" value. Very
-    simplistic, but might come in handy, as it is compatible with
-    lmfit (and multiprofile).
-
-    SEE ALSO: linear, lmfit, multiprofile
-    """
-
-    if (deriv):
-        # grad=_(array(1.,dimsof(xy(..,1)),1), xy)
-        # TODO
-        # grad=_(array(1.,dimsof(xy(..,1)),1), xy)
-        print("TODO")
-
-    # TODO: return grad?
-    return a[1] + a[2]*xy[:, 0] + a[3]*xy[:, 1]
-
-
-# func poly_lmfit(x,a,&grad,deriv=) {
-
+    return ydata, jacobian
 
 def poly_lmfit(x, a, deriv=None):
     """
