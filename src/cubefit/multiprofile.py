@@ -32,19 +32,19 @@ class MultiProfile:
     Examples
     --------
 
+    >>> import numpy
+    >>> from cubefit.profiles import gauss, poly
+    >>> from cubefit.multiprofile import MultiProfile
+    >>> x = numpy.linspace(-10, 10, 3000)
+
     Create a profile as the sum of two Gaussian profiles:
 
-    >>> import numpy
-    >>> from cubefit.lineprofiles import gauss
-    >>> from cubefit.multiprofile import MultiProfile
     >>> profile = MultiProfile(gauss, 3, 2)
-    >>> x = numpy.linspace(-10, 10, 3000)
     >>> a = (1., 0., 1., 2., 2., 0.5)
     >>> y, jac = profile(x, *a)
 
     Same on top of a linear continum:
 
-    >>> from cubefit.multiprofile import poly
     >>> profile = MultiProfile((gauss, poly), (3, 2), (2, 1))
     >>> a = (1., 0., 1., 2., 2., 0.5, 1, 0.1)
     >>> y, jac = profile(x, *a)
@@ -132,37 +132,6 @@ class MultiProfile:
         Suitable as jac parameter for curve_fit
         '''
         return self(xdata, *params)[1]
-
-# primitives
-
-def poly(xdata, *params):
-    """ Return a polynomial function and its Jacobian
-
-    ydata = params[0] + ...+  params[k] * xdata**k
-
-
-    """
-    nterms = len(params) # nterms = degree + 1
-
-    # x**0
-    ydata = np.full_like(xdata, params[0])
-    jacobian = np.zeros(ydata.shape + (nterms,))
-
-    if nterms > 1:
-        # x**1
-        ydata += params[1] * xdata
-        jacobian[..., 1] = xdata
-
-        if nterms > 2:
-            xpow = np.copy(xdata)
-
-        # x**2 and above
-        for k in range(2, nterms):
-            xpow *= xdata
-            ydata += params[k] * xpow
-            jacobian[..., k] = xpow
-
-    return ydata, jacobian
 
 # Fit doppler-shifted lines over a spectrum
 

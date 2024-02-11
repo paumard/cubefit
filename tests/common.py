@@ -19,7 +19,7 @@
 import unittest
 import numpy as np
 # import matplotlib.pyplot as plt
-from cubefit.lineprofiles import numerical_jacobian
+from cubefit.profiles import numerical_jacobian
 # , WrapToCurveFit, WrapFromCurveFit
 
 

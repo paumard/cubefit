@@ -1,6 +1,6 @@
 import os
 from .common import *
-from cubefit.lineprofiles import gauss, \
+from cubefit.profiles import gauss, \
     WrapToCurveFit, WrapFromCurveFit, WrapFromAstropy
 from cubefit.multiprofile import MultiProfile
 

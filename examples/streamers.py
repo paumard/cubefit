@@ -41,7 +41,7 @@ from matplotlib import pyplot as plt
 from cubefit.dopplerlines import DopplerLines
 from cubefit.cubemodel import CubeModel, markov,\
                               l1l2, RegularizationWithNumericalGradient
-from cubefit.lineprofiles import gauss, ngauss
+from cubefit.profiles import gauss, ngauss
 
 l1l2_num = RegularizationWithNumericalGradient(l1l2)
 

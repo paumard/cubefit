@@ -22,14 +22,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-# First try a relative import. This will work when lineprofiles,
+# First try a relative import. This will work when profiles,
 # dopplerlines and cubefit are submodules of a common module.  This
 # will fail when calling one of the submodules is called as a script,
 # so fall back to a simple import to cope with that use case.
 try:
-    from cubefit.lineprofiles import gauss, ngauss
+    from cubefit.profiles import gauss, ngauss
 except ImportError:
-    from lineprofiles import gauss, ngauss
+    from profiles import gauss, ngauss
 try:
     from cubefit.dopplerlines import DopplerLines
 except ImportError:

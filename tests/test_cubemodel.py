@@ -22,7 +22,7 @@ import unittest
 import numpy as np
 from cubefit.dopplerlines import DopplerLines
 from cubefit.cubemodel import CubeModel, markov, l1l2
-from cubefit.lineprofiles import gauss, ngauss
+from cubefit.profiles import gauss, ngauss
 
 DEBUG = os.environ.get("TEST_CUBEMODEL_DEBUG")
 

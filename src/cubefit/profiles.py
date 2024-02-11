@@ -138,7 +138,7 @@ def gauss(x, *a):
 
     See Also
     --------
-    cubefit.lineprofiles.ngauss
+    cubefit.profiles.ngauss
 
     """
     a = np.asarray(a, dtype=np.float64)
@@ -255,7 +255,7 @@ def old_gauss(x, *a):
 
     See Also
     --------
-    cubefit.lineprofiles.ngauss
+    cubefit.profiles.ngauss
 
     """
     # ensure a and x are numpy arrays and not some other array_like
@@ -374,7 +374,7 @@ def ngauss(x, *a):
 
     See also
     --------
-    cubefit.lineprofiles.gauss
+    cubefit.profiles.gauss
     """
 
     # ensure a and x are numpy arrays and not some other array_like
@@ -460,7 +460,7 @@ def moffat(x, *a):
 
     See Also
     --------
-    cubefit.lineprofiles.ngauss, asmoffat
+    cubefit.profiles.ngauss, asmoffat
     """
     __moffat_betamax = None
     __moffat_vmax = None
@@ -672,6 +672,33 @@ def asmoffat(x, *a):
 
     return res, grad
 
+def poly(xdata, *params):
+    """ Return a polynomial function and its Jacobian
+
+    ydata = params[0] + ...+  params[k] * xdata**k
+
+    """
+    nterms = len(params) # nterms = degree + 1
+
+    # x**0
+    ydata = np.full_like(xdata, params[0])
+    jacobian = np.zeros(ydata.shape + (nterms,))
+
+    if nterms > 1:
+        # x**1
+        ydata += params[1] * xdata
+        jacobian[..., 1] = xdata
+
+        if nterms > 2:
+            xpow = np.copy(xdata)
+
+        # x**2 and above
+        for k in range(2, nterms):
+            xpow *= xdata
+            ydata += params[k] * xpow
+            jacobian[..., k] = xpow
+
+    return ydata, jacobian
 
 class WrapToCurveFit:
     """Wrap a cubefit profile to a curve_fit objective function
@@ -679,7 +706,7 @@ class WrapToCurveFit:
     Parameters
     ----------
     profile : callable
-        A curvefit.lineprofiles profile.
+        A curvefit.profiles profile.
     """
     def __init__(self, profile):
         self.profile = profile
@@ -710,7 +737,7 @@ class WrapFromCurveFit:
     See Also
     --------
     scipy.optimize.curve_fit
-    cubefit.lineprofiles.numerical_jacobian
+    cubefit.profiles.numerical_jacobian
     """
     def __init__(self, f, jac=None, epsilon=1e-6):
         self.f = f

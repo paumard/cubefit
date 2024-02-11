@@ -20,10 +20,10 @@ import os
 import unittest
 import numpy as np
 from .common import Test1DModel
-from cubefit.lineprofiles import gauss, ngauss, WrapToCurveFit, \
+from cubefit.profiles import gauss, ngauss, WrapToCurveFit, \
  WrapFromCurveFit, WrapFromAstropy
 
-DEBUG = os.environ.get("TEST_LINEPROFILES_DEBUG")
+DEBUG = os.environ.get("TEST_PROFILES_DEBUG")
 
 
 class TestGauss(Test1DModel):
