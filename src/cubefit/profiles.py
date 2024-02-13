@@ -682,7 +682,7 @@ def poly(xdata, *params):
 
     # x**0
     ydata = np.full_like(xdata, params[0])
-    jacobian = np.zeros(ydata.shape + (nterms,))
+    jacobian = np.ones(ydata.shape + (nterms,))
 
     if nterms > 1:
         # x**1

@@ -20,7 +20,7 @@ import os
 import unittest
 import numpy as np
 from .common import Test1DModel
-from cubefit.profiles import gauss, ngauss, WrapToCurveFit, \
+from cubefit.profiles import gauss, ngauss, poly, WrapToCurveFit, \
  WrapFromCurveFit, WrapFromAstropy
 
 DEBUG = os.environ.get("TEST_PROFILES_DEBUG")
@@ -66,6 +66,28 @@ class TestGauss(Test1DModel):
         a = [1., 1., 0.5, 0.5, 0.1]
         x = np.linspace(-10, 10, 3000)
         self.check_jacobian(gauss, x, *a)
+
+class TestPoly(Test1DModel):
+    '''UnitTest class to test gauss function
+    '''
+    def test_poly(self):
+        # Test Gaussian for a few known values
+        params = (1.,)
+        for x in (0., 1., 2., -2.):
+            self.assertAlmostEqual(poly(0., *params)[0], params[0])
+        params = (1., 0.5)
+        for x in (0., 1., 2., -2.):
+            self.assertAlmostEqual(poly(x, *params)[0],
+                                   params[0]+params[1]*x)
+        params = (1., 0.5, 2)
+        for x in (0., 1., 2., -2.):
+            self.assertAlmostEqual(poly(x, *params)[0],
+                                   params[0]+params[1]*x+params[2]*x*x)
+
+    def test_poly_jacobian(self):
+        a = [1., 1., 0.5, 0.5, 0.1]
+        x = np.linspace(-10, 10, 3000)
+        self.check_jacobian(poly, x, *a)
 
 
 class TestAstropyGauss(Test1DModel):
