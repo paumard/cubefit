@@ -25,9 +25,21 @@ class MultiProfile:
         Number of parameters for each profile
     ncomps : int or tuple of int, optional
         Number of components of each profile
-    equals : None or tuple of tuple of int, optional
-        If not None, the indices of parameters that should be the same
-        for each component of each profile.
+    tiespecs : None, tuple of ((tuple of int) or (dict of dict)), optional
+
+        If not None: each item is either a tuple of int or a dict of dict.
+
+        If an item is a tuple of int: the indices of parameters that
+        should be equal to the value of this parameter of the first
+        component of each profile.
+
+        If an item is a dict of dict: the keys of the outer dict are
+        the indices of parameters that need to be tied to the value of
+        this parameter in the first instance of this component. The
+        values are dicts where the keys are one or several of "ratios"
+        and "offsets" and the values tuples of ratios and values
+        relative to the first instance, with one less item than
+        ncomps[this profile].
 
     Examples
     --------
@@ -51,31 +63,43 @@ class MultiProfile:
 
     Same, forcing the width of the two Gaussian to be equal:
 
-    >>> profile=MultiProfile((gauss,poly),(3,2),(2,1),equals=((2,),()))
+    >>> profile=MultiProfile((gauss,poly),(3,2),(2,1),tiespecs=((2,),()))
     >>> a = (1., 0., 0.5, 2., 2., 1, 0.1)
     >>> y, jac = profile(x, *a)
 
+    Same, with three Gaussians, forcing specific offset between the
+    two lines, specific line ratios and equal widths:
+
+    >>> profile=MultiProfile((gauss,poly),(3,2),(3,1), \
+           tiespecs=({0: {"ratios": (0.5, 2)}, \
+                        1: {"offsets": (-5, 5.)}, \
+                        2: {} },()))
+    >>> a = (1., 0., 0.5, 1, 0.1)
+    >>> y, jac = profile(x, *a)
+
     '''
-    def __init__(self, profiles, nterms, ncomps=1, equals=None):
+    def __init__(self, profiles, nterms, ncomps=1, tiespecs=None):
         # Ensure all parameters are in arrays
         self.profiles = np.atleast_1d(profiles)
         self.nterms   = np.broadcast_to(nterms, self.profiles.shape)
         self.ncomps   = np.broadcast_to(ncomps, self.profiles.shape)
         self.nterms_tot = np.sum(self.nterms*self.ncomps)
-
-        # Initialize self.equals: to empy lists is equals is None,
+        # Initialize self.tiespecs: to empy lists is tiespecs is None,
         # else to a sorted and uniq-ified tuple
-        if equals is None:
-            self.equals  = tuple( () for k in range(self.profiles.size))
+        if tiespecs is None:
+            self.tiespecs  = tuple( () for k in range(self.profiles.size))
         else:
-            assert len(equals) == self.profiles.size
-            self.equals = tuple(tuple(
-                sorted(set(equals[k]))) for k in range(self.profiles.size))
+            assert len(tiespecs) == self.profiles.size
             for k in range(self.profiles.size):
-                if len(self.equals[k]):
-                    assert max(self.equals[k]) < self.nterms[k], \
-                        "equals should be < nterms"
-                self.nterms_tot -= (self.ncomps[k]-1) * len(self.equals[k])
+                tprec=-1
+                for tind in tiespecs[k]:
+                    assert tprec < tind, \
+                        "tiespecs must be uniq and sorted"
+                    assert tind < self.nterms[k], \
+                        "tiespecs must be < nterms"
+                    tprec=tind
+                self.nterms_tot -= (self.ncomps[k]-1) * len(tiespecs[k])
+            self.tiespecs = tiespecs
 
     def __call__(self, xdata, *params):
         '''self(xdata, *params) -> ydata, jacobian 
@@ -90,29 +114,43 @@ class MultiProfile:
 
         curp=0 # index of current parameter
         for k in range(len(self.profiles)):
+            # loop over profiles
             fpfp=curp # index of First Parameter of first instance For
                       # this Profile
             profile=self.profiles[k]
             nparms=self.nterms[k]
             nc=self.ncomps[k]
-            equal=self.equals[k]
+            tspecs=self.tiespecs[k]
             tpl = params[curp:curp+nparms]
-            #print("tpl:",tpl)
             y, j = profile(xdata, *tpl)
             ydata += y
             jacobian[..., curp:curp+nparms] = j
             curp += nparms
             for c in range(1,nc):
-                prms = list(params[curp:curp+nparms-len(equal)])
-                #print("curp:", curp, ", nparms:", nparms, ", prms:", prms)
-                for k in equal:
-                    prms.insert(k, tpl[k])
-                #print("prms:",prms)
+                # loop over components for this profile
+                prms = list(params[curp:curp+nparms-len(tspecs)])
+                for i in tspecs:
+                    # loop over tiespecs for this profile, if any
+                    prms.insert(i, tpl[i])
+                    if isinstance(tspecs, dict):
+                        # if tiespecs[k] is a dict, appliy ratios
+                        # and offsets
+                        if "ratios" in tspecs[i]:
+                            prms[i] *= tspecs[i]["ratios"][c-1]
+                        if "offsets" in tspecs[i]:
+                            prms[i] += tspecs[i]["offsets"][c-1]
                 y, j = profile(xdata, *prms)
                 ydata += y
                 ij=0
                 for k in range(nparms):
-                    if k in equal:
+                    if k in tspecs:
+                        if isinstance(tspecs, dict):
+                            # if tiespecs[k] is a dict, apply ratios
+                            # and offsets
+                            if "ratios" in tspecs[k]:
+                                j[...,ij] *= tspecs[k]["ratios"][c-1]
+                            # if "offsets" in tspecs[k]:
+                            #    pass
                         jacobian[..., fpfp+ij] += j[..., ij]
                     else:
                         jacobian[..., curp] = j[..., ij]

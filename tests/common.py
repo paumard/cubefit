@@ -26,7 +26,7 @@ from cubefit.profiles import numerical_jacobian
 class Test1DModel(unittest.TestCase):
 
     def check_jacobian(self, f, x, *a, epsilon=1e-6, reltol=1e-3,
-                       diftol=None, diflim=None):
+                       diftol=None, diflim=None, debug=False):
         '''Check the Jacobian of f where f is a callable with syntax
          ymodel, dyda = f(xdata, a)
         xdata: independent variable
@@ -50,13 +50,21 @@ class Test1DModel(unittest.TestCase):
 
         absval = 0.5*np.abs(jac+jac0)
         difval = np.abs(jac-jac0)
+        if debug:
+            print ("check_jacobian: jac0")
+            print(jac0)
+            print ("check_jacobian: jac")
+            print(jac)
+            print ("check_jacobian: jac-jac0")
+            print(jac-jac0)
+            print ("check_jacobian: 2*abs(jac-jac0)/abs(jac+jac0)")
+            print(difval/absval)
+
         cond = absval > diflim
         if np.any(cond):
             maxrel = np.max(difval[cond]/absval[cond])
-            self.assertTrue(maxrel < reltol, f"Jacobian is not within relative\
-            tolerance (max: {maxrel}, reltol: {reltol}, diflim: {diflim})")
+            self.assertTrue(maxrel < reltol, f"Jacobian is not within relative tolerance (max: {maxrel}, reltol: {reltol}, diflim: {diflim}")
         cond = absval <= diflim
         if np.any(cond):
             maxdif = np.max(difval[cond])
-            self.assertTrue(maxdif < diftol, f"Jacobian is not within absolute\
-            tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
+            self.assertTrue(maxdif < diftol, f"Jacobian is not within absolute tolerance (max: {maxdif}, diftol: {diftol}, diflim: {diflim})")
