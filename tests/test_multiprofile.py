@@ -1,12 +1,39 @@
+#!/usr/bin/env python3
+#    Copyright (C) 2023-2024  Thibaut Paumard <thibaut.paumard@obspm.fr>
+#            Julien Brulé
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public License along
+#    with this program; if not, write to the Free Software Foundation, Inc.,
+#    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+
 import os
-from .common import *
+import doctest
+try:
+    from .common import *
+except ImportError:
+    from common import *
 from cubefit.profiles import gauss, poly, \
     WrapToCurveFit, WrapFromCurveFit, WrapFromAstropy
 from cubefit.multiprofile import MultiProfile
+import cubefit.multiprofile
 
 DEBUG=os.environ.get("TEST_MULTIPROFILE_DEBUG")
 if DEBUG:
     from matplotlib import pyplot as plt
+
+def load_tests(loader, tests, ignore):
+    tests.addTests(doctest.DocTestSuite(cubefit.multiprofile))
+    return tests
 
 class TestMultiProfile(Test1DModel):
     '''UnitTest class to test MultiProfile class
@@ -166,7 +193,6 @@ class TestMultiProfile(Test1DModel):
         x = np.linspace(-10, 10, 3000)
         self.check_jacobian(prof, x, *paramsg0)
         self.check_jacobian(profile, x[1000:1005], *params)
-
 
 if __name__ == '__main__':
    unittest.main()

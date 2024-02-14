@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2023  Thibaut Paumard <thibaut.paumard@obspm.fr>
+#    Copyright (C) 2023-2024 Thibaut Paumard <thibaut.paumard@obspm.fr>
 #            Julien Brulé
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -19,13 +19,18 @@
 # import sys
 import os
 import unittest
+import doctest
 import numpy as np
 from cubefit.dopplerlines import DopplerLines
 from cubefit.cubemodel import CubeModel, markov, l1l2
 from cubefit.profiles import gauss, ngauss
+import cubefit.cubemodel
 
 DEBUG = os.environ.get("TEST_CUBEMODEL_DEBUG")
 
+def load_tests(loader, tests, ignore):
+    tests.addTests(doctest.DocTestSuite(cubefit.cubemodel))
+    return tests
 
 def add_noise(cube, sigma=0.02):
     '''Add noise to data.
@@ -656,7 +661,6 @@ class TestCubemodel(unittest.TestCase):
 
         # print(f"crit bicol {crit_pattern}")
         # print(f"grad {grad}")
-
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2023  Thibaut Paumard <thibaut.paumard@obspm.fr>
+#    Copyright (C) 2023-2024  Thibaut Paumard <thibaut.paumard@obspm.fr>
 #            Julien Brulé
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -19,8 +19,13 @@
 import os
 from scipy import optimize
 import unittest
+import doctest
 import numpy as np
-from .common import Test1DModel
+try:
+    from .common import Test1DModel
+except ImportError:
+    from common import Test1DModel
+import cubefit.dopplerlines
 from cubefit.dopplerlines import DopplerLines
 from cubefit.profiles import ngauss
 
@@ -29,6 +34,9 @@ DEBUG = os.environ.get("TEST_DOPPLERLINES_DEBUG")
 if DEBUG:
     from matplotlib import pyplot as plt
 
+def load_tests(loader, tests, ignore):
+    tests.addTests(doctest.DocTestSuite(cubefit.dopplerlines))
+    return tests
 
 class TestDopplerlines(Test1DModel):
     '''UnitTest class to test gauss function
@@ -58,7 +66,7 @@ class TestDopplerlines(Test1DModel):
             y = obj(eval, [1.2, 25., 100.]) + random_n(100) * sigma;
             plg, y, x;
             a = [1., 0., 50.];
-            curvefit, obj.curvefit_func, obj, a, y, deriv=1;
+            curvefit, obj.cf_func, obj, a, y, deriv=1;
             write, format="Model parameters: [%e, %e, %e]\n", a(1), a(2), a(3);
             model = obj(eval, a);
             plg, color = "red", model, x;
@@ -94,9 +102,9 @@ class TestDopplerlines(Test1DModel):
 
         a0 = np.array([1., 0., 50.])
 
-        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
-                                            p0=a0, jac=dop.curvefit_jac)
-        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y,
+        resopt, reqcov = optimize.curve_fit(dop.cf_func, waxis, y,
+                                            p0=a0, jac=dop.cf_jac)
+        resopt2, reqcov2 = optimize.curve_fit(dop.cf_func, waxis, y,
                                               p0=a0)
 
         model = dop(waxis, *resopt)[0]
@@ -136,9 +144,9 @@ class TestDopplerlines(Test1DModel):
         if DEBUG:
             print("===FIT 2==========")
         a0 = np.array([1., 0.3, 50., 50.])
-        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
-                                            p0=a0, jac=dop.curvefit_jac)
-        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y,
+        resopt, reqcov = optimize.curve_fit(dop.cf_func, waxis, y,
+                                            p0=a0, jac=dop.cf_jac)
+        resopt2, reqcov2 = optimize.curve_fit(dop.cf_func, waxis, y,
                                               p0=a0)
 
         model = dop(waxis, *resopt)[0]
@@ -180,10 +188,10 @@ class TestDopplerlines(Test1DModel):
             print(f"y==={y}")
             print("===FIT 2 + cst==========")
         a0 = np.array([1., 0.4, 50., 50, 1.5])
-        resopt2, reqcov2 = optimize.curve_fit(dop.curvefit_func, waxis, y,
+        resopt2, reqcov2 = optimize.curve_fit(dop.cf_func, waxis, y,
                                               p0=a0)
-        resopt, reqcov = optimize.curve_fit(dop.curvefit_func, waxis, y,
-                                            p0=a0, jac=dop.curvefit_jac)
+        resopt, reqcov = optimize.curve_fit(dop.cf_func, waxis, y,
+                                            p0=a0, jac=dop.cf_jac)
 
         model = dop(waxis, *resopt)[0]
         model2 = dop(waxis, *resopt2)[0]
@@ -211,7 +219,6 @@ class TestDopplerlines(Test1DModel):
             plt.plot(waxis, y, label="y")
             plt.legend()
             plt.show()
-
 
 if __name__ == '__main__':
     unittest.main()

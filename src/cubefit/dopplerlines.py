@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2023  Thibaut Paumard <thibaut.paumard@obspm.fr>
+#    Copyright (C) 2023-2024 Thibaut Paumard <thibaut.paumard@obspm.fr>
 #            Julien Brulé
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -277,11 +277,12 @@ class DopplerLines():
 
         return model, np.transpose(grad, [1, 0])
 
-    def curvefit_func(self, xdata, *params):
-        """curvefit-compatible wrapper eval
+    def cf_func(self, xdata, *params):
+        """curvefit-compatible wrapper around __call__
 
         Examples
         --------
+        >>> from scipy import optimize
         >>> sigma = 20.5
         >>> lines = 2.166120
         >>> waxis = np.linspace(2.15, 2.175, 100)
@@ -289,7 +290,7 @@ class DopplerLines():
         >>> a = np.array([1.2, 25., 100.])
         >>> y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
         >>> a0 = np.array([1., 0., 50.])
-        >>> resopt, _ = optimize.curve_fit(dop.curvefit_func, waxis, y, p0=a0)
+        >>> resopt, _ = optimize.curve_fit(dop.cf_func, waxis, y, p0=a0)
         >>> model = dop(waxis, *resopt)[0]
         >>> chi = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
 
@@ -303,11 +304,12 @@ class DopplerLines():
         """
         return self(xdata, *params)[0]
 
-    def curvefit_jac(self, xdata, *params):
-        """curvefit-compatible wrapper around eval jacobian function
+    def cf_jac(self, xdata, *params):
+        """curvefit-compatible wrapper around __call__ to get Jacobian matrix
 
         Examples
         --------
+        >>> from scipy import optimize
         >>> sigma = 20.5
         >>> lines = 2.166120
         >>> waxis = np.linspace(2.15, 2.175, 100)
@@ -315,8 +317,8 @@ class DopplerLines():
         >>> a = np.array([1.2, 25., 100.])
         >>> y = dop(waxis, *a)[0] + np.random.standard_normal(100) * sigma
         >>> a0 = np.array([1., 0., 50.])
-        >>> resopt, _ = optimize.curve_fit(dop.curvefit_func, waxis,
-        ...         y, p0=a0, jac=dop.curvefit_jac)
+        >>> resopt, _ = optimize.curve_fit(dop.cf_func, waxis,
+        ...         y, p0=a0, jac=dop.cf_jac)
         >>> model = dop(waxis, *resopt)[0]
         >>> chi = np.sum(((y-model)/sigma)**2)/(y.size-a.size+1)
 

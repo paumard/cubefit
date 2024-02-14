@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-#    Copyright (C) 2023  Thibaut Paumard <thibaut.paumard@obspm.fr>
+#    Copyright (C) 2023-2024 Thibaut Paumard <thibaut.paumard@obspm.fr>
 #            Julien Brulé
 #
 #    This program is free software; you can redistribute it and/or modify
@@ -18,13 +18,21 @@
 
 import os
 import unittest
+import doctest
 import numpy as np
-from .common import Test1DModel
+try:
+    from .common import Test1DModel
+except ImportError:
+    from common import Test1DModel
+import cubefit.profiles
 from cubefit.profiles import gauss, ngauss, poly, WrapToCurveFit, \
  WrapFromCurveFit, WrapFromAstropy
 
 DEBUG = os.environ.get("TEST_PROFILES_DEBUG")
 
+def load_tests(loader, tests, ignore):
+    tests.addTests(doctest.DocTestSuite(cubefit.profiles))
+    return tests
 
 class TestGauss(Test1DModel):
     '''UnitTest class to test gauss function
@@ -189,7 +197,6 @@ class TestCurveFitWrappers(Test1DModel):
                 self.assertEqual(origjac[k, param], cvjac[k, param])
                 self.assertAlmostEqual(origjac[k, param], cbnjac[k, param])
                 self.assertEqual(origjac[k, param], cbajac[k, param])
-
 
 if __name__ == '__main__':
     unittest.main()
