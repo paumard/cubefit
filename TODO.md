@@ -99,9 +99,9 @@ En fait, ce serait mieux d'adopter cette notation partout dans le code, au moins
    1. [ ] Allow user to fix some parameters; perhaps setting
           lower==upper is enough?
    1. [ ] Pythonify multiprofile:
-      - [ ] Use proper capitalisation;
-      - [ ] Define Pythonic API;
-      - [ ] Verify and write test suite and example;
+      - [x] Use proper capitalisation;
+      - [x] Define Pythonic API;
+      - [x] Verify and write test suite and example;
       - [ ] Write documentation.
 1. [ ] Check on real data.
 
@@ -134,15 +134,15 @@ En fait, ce serait mieux d'adopter cette notation partout dans le code, au moins
        parameters in ptweak (e.g. neighboring pixels, or flux
        depending on width etc.); The big part is to transform the
        gradient into a Jacobian matrix.
-1. [ ] Pythonify moffat.py and merge it into lineprofiles.py:
+1. [ ] Pythonify moffat.py and merge it into profiles.py:
    - [ ] Rename 1D profile to simply moffat instead of moffat1d
    - [ ] Debug and write test suite including gradient;
    - [ ] Write an example or test where moffat is used as a base
          profile for DopplerLines.
-1. [ ] Verify that all 1D models (from lineprofiles, dopplerlines or
+1. [ ] Verify that all 1D models (from profiles, dopplerlines or
        multiprofile) work with xdata of any shape (scalar,
        n-dimensional array...).
-1. [ ] Verify that all 1D models (from lineprofiles, dopplerlines or
+1. [ ] Verify that all 1D models (from profiles, dopplerlines or
        multiprofile) work with params of any shape (where each
        parameter could be scalar or an n-dimensional array); maybe
        difficult to code the Jacobian.

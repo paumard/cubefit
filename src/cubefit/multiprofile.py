@@ -8,7 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy import optimize
 
-"""Compound profiles for cubefit.cubemodel.CubeModel
+"""Compound profile for cubefit.cubemodel.CubeModel
 """
 
 class MultiProfile:
@@ -16,6 +16,19 @@ class MultiProfile:
 
     A MultiProfile instance is a Python callable suitable as a profile
     for CubeModel, defined as the sum of profiles.
+
+    The compound profile is composed of one or several instances of
+    one of several profiles (i.e. Python callables usable as "profile"
+    parameter for the cubefit.cubemodel.CubeModel constructor). The
+    parameters of the various instances of the same profile can be
+    tied: set equal, forced to have a certain ratio, forced to have a
+    certain offset (see tiespecs parameter). This can be used for
+    instance for fitting several spectral lines with known offsets in
+    velocity or wavelength, sharing the same width and with known
+    intensity ratio. Parameters that are tied are present only once,
+    for the first instance of a group, since the value of this
+    parameter for the other instances is fully determined by its value
+    for the first instance.
 
     Parameters
     ----------
@@ -170,254 +183,3 @@ class MultiProfile:
         Suitable as jac parameter for curve_fit
         '''
         return self(xdata, *params)[1]
-
-# Fit doppler-shifted lines over a spectrum
-
-# TODO ol_setx doesn t touch to  realX=None, lines=None, positivity=None, !
-# func ol_setx(profile=, realX=, lines=, positivity=,
-# intensities=, fixedratio=) {
-
-
-def ol_setx(profile=None, realX=None, lines=None, positivity=None,
-            intensities=None, fixedratio=None):
-    """Set up X parameter for offsetlines().
-
-    Parameters
-    ----------
-
-    profile :  model function for individual line (default: moffat1d)
-    realX  : independent variables used by PROFILE
-    lines  : vector containing the list of lines
-    positivity : for each line, 1 if the line should be forced a
-             positive amplitude (emission line), -1 for a negative
-             amplitude (absorption line)
-    intensities : relative intensities of the lines
-
-    Notes
-    -----
-
-    The intensities of the lines can be unconstrained (default),
-    constrained to be emission lines or absorption lines (POSITIVITY
-    set and either INTENSITIES not set or FIXEDRATIO set to 0), or
-    constrained to have predefined relative intensities (INTENSITIES
-    set and FIXEDRATIO not set or set to 1). If FIXEDRATIO is set to 1
-    and INTENSITIES is not set, it defaults to array(1.,
-    numberof(LINES)).
-
-    See Also:
-    offsetlines
-    """
-
-    if (profile is None):
-        # see https://docs.astropy.org/en/stable/modeling/reference_api.html
-        # TODO
-        from moffat import moffat1d
-        profile = moffat1d
-
-    if (fixedratio is None):
-        # fixedratio=!is_void(intensities);
-        if intensities is None:
-            fixedratio = False
-
-    if (fixedratio and intensities is None):
-        intensities = np.ones(len(lines))
-
-    # return _lst(profile, realX, lines, positivity, intensities, fixedratio)
-    print(f" ol_setx {profile}")
-    print(f"{ realX, lines, positivity, intensities, fixedratio}")
-    return (profile, realX, lines, positivity, intensities, fixedratio)
-
-# func offsetlines(x,a,&grad,&comps,deriv=,returncomps=){
-
-
-def offsetlines(x, a, deriv=None, returncomps=None):
-    """Fit several lines of identical shape over a spectrum, sharing a
-     common displacement (for instance Doppler shift, if the
-     wavelength range is short enough).
-
-     This function is suitable for call by lmfit. It returns a complex
-     profile made of the sum of several lines (Moffat profiles, by
-     default), which are moved only together (their relative distances
-     remain unchanged). As long as the primitive profile is able to
-     return derivatives, offsetlines does, too.
-
-    Parameters
-    ----------
-     X : np.array
-        the result of a call to ol_setx, which see. X contains
-        information on the lines to fit and the type of profile to use
-        (Moffat by default). X also contains the wavelengths or
-        frequencies.
-     A : np.array
-        the vector of parameters to fit. If ol_setx() has been called
-        with INTENSITIES set and FIXEDRATIO either not set or set to
-        1, A(1) is the multiplicative coefficient by which to multiply
-        each of these individual relative intensities. In all other
-        cases, the first numberof(lines) elements of A are the
-        individual intensities of the various lines. The remaining
-        parameters are always common to all the lines: the offset
-        relative to the rest position set with the LINES keyword of
-        ol_setx, and then the other parameters for the PROFILE set
-        using ol_setx. By default, the PROFILE==moffat1d, and requires
-        two parameters for the line shape (line width and beta; see
-        moffat1d()).
-
-     Examples
-     --------
-
-      // Basic set-up
-      x = span(2.0, 2.4, 200)  // set up wavelength (or frequency) vector
-
-      lines=[2.058, 2.15, 2.16, 2.3]; // give rest wavelength or
-                                      // frequency of each line
-
-      // Prepare spectrum
-      olx=ol_setx(realX=x, lines=lines);
-      A=[   1, 0.5,   0.6, 1.2,       // individual intensities
-         0.02, 0.005, 1.1];           // displacement, width, beta
-      y=offsetlines(olx, A);
-      plg, y, x;
-
-      // Fit with free intensities
-      y_obs= y+0.2*random_n(dimsof(y));
-      res=lmfit(offsetlines, olx, A, y_obs,deriv=1);
-      fma; plg, y_obs, x;
-      plg, offsetlines(olx, A), x, color="red";
-
-      // Prepare spectrum, setting INTENSITIES in ol_setx
-      olx=ol_setx(realX=x, lines=lines, intensities=[1., 0.5, 0.6, 1.2]);
-      A=[1., 0.02, 0.005, 1.1];
-      y=offsetlines(olx, A);
-      fma; plg, y, x;
-
-      // Fit with tied intensities
-      y_obs= y+0.2*random_n(dimsof(y));
-      res=lmfit(offsetlines, olx, A, y_obs, deriv=1);
-      fma; plg, y_obs, x;
-      plg, offsetlines(olx, A), x, color="red";
-
-      See Also
-      --------
-      ol_setx, lmfit, multiprofile, moffat1d.
-    """
-
-    profile = x[0]
-    realX = x[1]
-    lines = x[2]
-    positivity = x[3]
-    intensities = x[4]
-    fixedratio = x[5]
-
-    print(f"call offsetline with x {x}")
-
-    nlines = len(lines)
-    print(f"nlines {nlines}")
-    npars = len(a)
-    print(f"npars {npars}")
-
-    if (not fixedratio):
-        npars -= nlines-1
-
-    pars = np.empty((nlines, npars))
-
-    if (fixedratio):
-        print("fixedratio")
-        pars[:, 0] = intensities
-        pars[:, 1] = lines+a[1]
-        # pars(,3:)=a(-,3:);
-        pars[:, 2] = a[np.newaxis, 2:]
-    else:
-        pars[:, 0] = a[0:nlines]
-
-        if (positivity is not None):
-            ind = np.where(positivity == -1)
-            if (ind.size):
-                pars[ind, 0] = -abs(pars[ind, 0])
-
-            ind = np.where(positivity == 1)
-            if (ind.size):
-                pars[ind, 0] = abs(pars[ind, 0])
-
-        pars[:, 1] = lines + a[nlines+1]
-        # pars[:,2]=a(-,nlines+2:);
-        pars[:, 2] = a[np.newaxis, nlines+2:]
-
-    a2 = mp_seta(pars)
-    X = mp_setx(npar=npars, ncomp=nlines, realX=realX, profile=profile)
-    # TODO call jac sp=mp_func(X,a2, grad2, deriv=deriv);
-    sp, grad2 = mp_func(X, *a2)
-
-    # if (deriv):
-    # peigne=(indgen(nlines)-1)*npars
-    peigne = np.fromiter(range(0, nlines), int)*npars
-    grad = np.array(sp.shape, a.size)
-    if (fixedratio):
-        grad[:, 0] = sp
-    else:
-        grad[:, 0:nlines] = grad2[:, 0+peigne]
-    if fixedratio:
-        offset = nlines-1
-    else:
-        offset = 0
-    for i in range(npars):
-        # TODO sum
-        # grad[:,i+offset]=grad2[:,peigne+i](:,sum)
-        print("sum")
-
-    if (fixedratio):
-        sp *= a[0]
-
-    return sp, grad
-
-
-def test_offsetlines():
-    # Basic set-up
-
-    # set up wavelength (or frequency) vector
-    x = np.linspace(2.0, 2.4, 200)
-
-    # give rest wavelength or frequency of each line
-    lines = np.array([2.058, 2.15, 2.16, 2.3])
-
-    # Prepare spectrum
-    print("Prepare spectrum call ol_setx")
-    olx = ol_setx(realX=x, lines=lines)
-    print(f"olx {olx}")
-
-    # individual intensities  displacement, width, beta
-    A = np.array([1, 0.5, 0.6, 1.2,  0.02, 0.005, 1.1])
-
-    print("call offsetlines")
-    y = offsetlines(olx, A)
-    # plg, y, x;
-
-    # Fit with free intensities
-    print("Fit with free intensities")
-    # y_obs= y+0.2*random_n(dimsof(y))
-    y_obs = y+0.2*np.random.normal(0, 1, y.shape)
-    # res=lmfit(offsetlines, olx, A, y_obs,deriv=1)
-    res, req = optimize.curve_fit(offsetlines, olx, A, y_obs)
-    # resopt_jac, reqcov_jac = optimize.curve_fit(curve_fit_func, nx, y, p0=a0,
-    #                                            jac=curve_fit_func.jac)
-    # fma; plg, y_obs, x
-    # plg, offsetlines(olx, A), x, color="red";
-
-    # Prepare spectrum, setting INTENSITIES in ol_setx
-    olx = ol_setx(realX=x, lines=lines, intensities=[1., 0.5, 0.6, 1.2])
-    A = [1., 0.02, 0.005, 1.1]
-    y = offsetlines(olx, A)
-
-    # fma; plg, y, x;
-
-    # Fit with tied intensities
-    y_obs = y+0.2*np.random.standard_normal(y.shape)
-    # res=lmfit(offsetlines, olx, A, y_obs, deriv=1);
-    resopt, reqcov = optimize.curve_fit(offsetlines, olx, A, y_obs)
-    # fma; plg, y_obs, x;
-    plt.figure()
-    plt.plot(offsetlines(olx, A), x)
-    plt.show()
-
-
-if __name__ == '__main__':
-    test_offsetlines()
