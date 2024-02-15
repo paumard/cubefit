@@ -86,23 +86,24 @@ For instance the checklists below follow this syntax:
             find a good set of hyper-parameters (scale and delta) so
             that the velocity map is recovered for the full field
             without blurring the flux and width maps.
-      - [ ] Include tests of CubeModel.fit() with regularisation=l1l2
-            and with regularisation=markov in the unit test suite; if
-            possible include asserts to check that the result is as
+      - [x] Include tests of CubeModel.fit() with regularisation=l1l2
+            and with regularisation=markov in the unit test suite.
+      - [ ] If possible include asserts to check that the result is as
             expected.
 1. [ ] Code Quality
     1. [ ] Check data structure
-        - [ ] coherency ( en python pour un tableau 2d la première dimension indique le numéro de ligne et la seconde le numéro de ligne. Ce n'est pas hyper important parce que ce ne sont "que" des noms de variables, mais comme tu l'as peut-être remarqué quand on affiche un tableau comme image c'est la dimension que j'ai noté i ici qui va de gauche à droite et celle que j'ai notée j qui va de bas en haut.
-En fait, ce serait mieux d'adopter cette notation partout dans le code, au moins dans la doc : pour toutes les images, la première dimension est celle des j/y/delta, la seconde celle des i/x/alpha. )
-
+        - [ ] coherency : throughout the code, use j/y/delta for first
+          dimension name, i/x/alpha for second dimension name as
+          plt.imshow et al. consider that first dim is line number and
+          second dim is column number
 1. [ ] Implement and check advanced, required features:
    1. [ ] Allow user to fix some parameters; perhaps setting
           lower==upper is enough?
-   1. [ ] Pythonify multiprofile:
+   1. [x] Pythonify multiprofile:
       - [x] Use proper capitalisation;
       - [x] Define Pythonic API;
       - [x] Verify and write test suite and example;
-      - [ ] Write documentation.
+      - [x] Write documentation.
 1. [ ] Check on real data.
 
 ### P1: Packaging
@@ -135,7 +136,7 @@ En fait, ce serait mieux d'adopter cette notation partout dans le code, au moins
        depending on width etc.); The big part is to transform the
        gradient into a Jacobian matrix.
 1. [ ] Pythonify moffat.py and merge it into profiles.py:
-   - [ ] Rename 1D profile to simply moffat instead of moffat1d
+   - [x] Rename 1D profile to simply moffat instead of moffat1d
    - [ ] Debug and write test suite including gradient;
    - [ ] Write an example or test where moffat is used as a base
          profile for DopplerLines.

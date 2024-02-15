@@ -329,10 +329,6 @@ class TestCubemodel(unittest.TestCase):
         '''
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = (5, 5, 433)
-        # Model we want to test
-        model = CubeModel(profile=gauss,
-                          profile_xdata=np.linspace(-10, 10, nz),
-                          regularization=None, framedelay=-1)
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d = (1, 1, 0.5, 0.5, 0.1)
         # Initial guess for fit. Can be 1D or 3D.
@@ -340,9 +336,15 @@ class TestCubemodel(unittest.TestCase):
         # Sigma of errors to add to "true" cube to get "observational" data
         sigma = 0.02
 
-        # Call helper
-        chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz),
-                                                  xreal_1d, xtest_1d, sigma)
+        for reg in (markov, l1l2, None):
+            # Model we want to test
+            model = CubeModel(profile=gauss,
+                              profile_xdata=np.linspace(-10, 10, nz),
+                              regularization=reg, framedelay=-1)
+            # Call helper
+            chi2, testres = self.helper_cubemodel_fit(model, (nx, ny, nz),
+                                                      xreal_1d, xtest_1d,
+                                                      sigma)
 
         # At this stage, perform some verifications on chi2 and/testres.
         # For instance: raise error is chi2 not close to 1
@@ -354,12 +356,6 @@ class TestCubemodel(unittest.TestCase):
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = 5, 4, 433
 
-        # Model we want to test
-        profile = DopplerLines(2.166120, profile=ngauss)
-        profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata,
-                          regularization=None, framedelay=-1)
-
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d = (1.2, 0.5, 25., 100)
 
@@ -369,11 +365,17 @@ class TestCubemodel(unittest.TestCase):
         # Sigma of errors to add to "true" cube to get "observational" data
         sigma = 0.2
 
-        # Call helper
-        chi2, testres = self.helper_cubemodel_fit(model,
-                                                  (nx, ny, nz),
-                                                  xreal_1d, xtest_1d,
-                                                  sigma, fmin=0.)
+        for reg in (markov, l1l2, None):
+            # Model we want to test
+            profile = DopplerLines(2.166120, profile=ngauss)
+            profile_xdata = np.linspace(2.15, 2.175, nz)
+            model = CubeModel(profile=profile, profile_xdata=profile_xdata,
+                              regularization=reg, framedelay=-1)
+            # Call helper
+            chi2, testres = self.helper_cubemodel_fit(model,
+                                                      (nx, ny, nz),
+                                                      xreal_1d, xtest_1d,
+                                                      sigma, fmin=0.)
 
         # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
@@ -385,12 +387,6 @@ class TestCubemodel(unittest.TestCase):
         # Shape of data cube (nx, ny, nz)
         nx, ny, nz = 5, 4, 433
 
-        # Model we want to test
-        profile = DopplerLines(2.166120, profile=ngauss)
-        profile_xdata = np.linspace(2.15, 2.175, nz)
-        model = CubeModel(profile=profile, profile_xdata=profile_xdata,
-                          regularization=None, framedelay=-1)
-
         # Parameters for "true" cube. Can be 1D or 3D.
         xreal_1d = (1.2, 0.5, 25., 100)
 
@@ -400,10 +396,17 @@ class TestCubemodel(unittest.TestCase):
         # Sigma of errors to add to "true" cube to get "observational" data
         sigma = 0.5
 
-        # Call helper
-        chi2, testres = self.helper_cubemodel_fit(model,
-                                                  (nx, ny, nz),
-                                                  xreal_1d, xtest_1d, sigma)
+        for reg in (markov, l1l2, None):
+            # Model we want to test
+            profile = DopplerLines(2.166120, profile=ngauss)
+            profile_xdata = np.linspace(2.15, 2.175, nz)
+            model = CubeModel(profile=profile, profile_xdata=profile_xdata,
+                              regularization=reg, framedelay=-1)
+            # Call helper
+            chi2, testres = self.helper_cubemodel_fit(model,
+                                                      (nx, ny, nz),
+                                                      xreal_1d, xtest_1d,
+                                                      sigma)
 
         # At this stage, perform some verifications on chi2 and/testres.
         # raise error is chi2 not close to 1
